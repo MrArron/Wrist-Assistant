@@ -1,0 +1,19 @@
+# Signing secrets: never commit
+keystore.properties
+*.jks
+*.keystore
+local.properties
+# Build output
+build/
+.gradle/
+.kotlin/
+.lock-waf*
+*.pbw
+*.apk
+node_modules/
+.idea/
+*.iml
+# Local deliverables (APK, .pbw, screenshots)
+out/
+dist/
+.DS_Store

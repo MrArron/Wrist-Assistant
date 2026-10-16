@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    name: watch
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wrist-claude
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+
+      - name: Cache Pebble SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pebble-sdk
+          key: pebble-sdk-4.33.1
+
+      - name: Install Pebble tool and SDK 4.33.1
+        # pebble-tool has no analytics prompt in current versions, so this runs non-interactively.
+        run: |
+          uv tool install pebble-tool==5.0.40
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          pebble sdk install 4.33.1
+          pebble sdk activate 4.33.1 || true
+
+      - name: Build watch app
+        run: pebble build
+
+      - name: Size budget (fails if over sizeBudgetBytes in pebble-dev.json)
+        run: python3 tools/watch_size.py --platform emery
+
+      - name: Phone-side (pkjs) tests
+        run: |
+          for f in test/pkjs/*.test.js; do
+            echo "== $f"
+            node "$f"
+          done
+
+  android:
+    name: android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wrist-claude-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          # The project builds against platform android-37.2 (a stable release, listed by sdkmanager as
+          # platforms;android-37.2) and build-tools 37.0.0. If a runner's sdkmanager cannot find them,
+          # this step fails loudly.
+          packages: "platform-tools platforms;android-37.2 build-tools;37.0.0"
+
+      - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+
+      - name: Point Gradle at the SDK
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Unit tests, lint, debug APK
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace

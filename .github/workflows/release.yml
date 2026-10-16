@@ -1,0 +1,145 @@
+name: Release
+
+# Push a tag like v2.1.0 to build the watch app (.pbw) and a release-signed companion APK and attach
+# both to a GitHub Release. Needs four repository secrets and one variable; see docs/RELEASING.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches every version in the repo
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./wrist-claude/package.json').version")
+          js=$(sed -n "s/.*APP_VERSION = '\([0-9.]*\)'.*/\1/p" wrist-claude/src/pkjs/version.js | head -n1)
+          vn=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wrist-claude-android/app/build.gradle.kts | head -n1)
+          vc=$(sed -n 's/.*versionCode = \([^ ]*\).*/\1/p' wrist-claude-android/app/build.gradle.kts | head -n1)
+          echo "tag=$tag package.json=$pkg version.js=$js versionName=$vn versionCode=$vc"
+          fail=0
+          [ "$pkg" = "$tag" ] || { echo "wrist-claude/package.json version ($pkg) does not match tag ($tag)" >&2; fail=1; }
+          [ "$js" = "$tag" ] || { echo "APP_VERSION in wrist-claude/src/pkjs/version.js ($js) does not match tag ($tag)" >&2; fail=1; }
+          [ "$vn" = "$tag" ] || { echo "versionName in wrist-claude-android/app/build.gradle.kts ($vn) does not match tag ($tag)" >&2; fail=1; }
+          case "$vc" in ''|*[!0-9]*) echo "versionCode ('$vc') is not an integer" >&2; fail=1 ;; esac
+          [ "$fail" = 0 ] || exit 1
+          echo "versionCode: $vc"
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+
+      - name: Check signing secrets exist
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for n in KS KSP KA KP; do
+            if [ -z "${!n}" ]; then echo "Missing signing secret ($n). See docs/RELEASING.md." >&2; exit 1; fi
+          done
+
+      # --- watch app ---
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+      - name: Install Pebble tool and SDK 4.33.1
+        run: |
+          uv tool install pebble-tool==5.0.40
+          export PATH="$HOME/.local/bin:$PATH"
+          pebble sdk install 4.33.1
+          pebble sdk activate 4.33.1 || true
+      - name: Build, check size, test watch app
+        working-directory: wrist-claude
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          pebble build
+          python3 tools/watch_size.py --platform emery
+          for f in test/pkjs/*.test.js; do node "$f"; done
+
+      # --- companion ---
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: "platform-tools platforms;android-37.2 build-tools;37.0.0"
+      - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+      - name: Write signing files (values are never echoed)
+        working-directory: wrist-claude-android
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KSP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set +x
+          printf '%s' "$KS" | base64 -d > release.jks
+          {
+            echo "storeFile=release.jks"
+            printf 'storePassword=%s\n' "$KSP"
+            printf 'keyAlias=%s\n' "$KA"
+            printf 'keyPassword=%s\n' "$KP"
+          } > keystore.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Build and test the release APK
+        working-directory: wrist-claude-android
+        run: ./gradlew testDebugUnitTest lintDebug assembleRelease --stacktrace
+      - name: Verify the APK is signed with the expected key
+        working-directory: wrist-claude-android
+        env:
+          EXPECTED_CERT: ${{ vars.ANDROID_CERT_SHA256 }}
+        run: |
+          if [ -z "$EXPECTED_CERT" ]; then
+            echo "Repository variable ANDROID_CERT_SHA256 is not set. Set it to the SHA-256 of your release certificate (Settings, Secrets and variables, Actions, Variables). See docs/RELEASING.md." >&2
+            exit 1
+          fi
+          apk=app/build/outputs/apk/release/app-release.apk
+          apksigner="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          "$apksigner" verify "$apk"
+          certs=$("$apksigner" verify --print-certs "$apk")
+          echo "$certs" | grep -E "certificate (SHA-1|SHA-256) digest"
+          norm() { printf '%s' "$1" | tr -d ': \t\r\n' | tr 'A-F' 'a-f'; }
+          actual=$(norm "$(echo "$certs" | sed -n 's/.*certificate SHA-256 digest: *//p' | head -n1)")
+          expected=$(norm "$EXPECTED_CERT")
+          if [ -z "$actual" ] || [ "$actual" != "$expected" ]; then
+            echo "APK certificate SHA-256 ($actual) does not match ANDROID_CERT_SHA256 ($expected). Wrong keystore secret?" >&2
+            exit 1
+          fi
+          echo "Certificate matches ANDROID_CERT_SHA256."
+
+      - name: Collect release files
+        run: |
+          mkdir -p dist
+          cp wrist-claude/build/wrist-claude.pbw "dist/wrist-assistant-${VERSION}.pbw"
+          cp wrist-claude-android/app/build/outputs/apk/release/app-release.apk "dist/wrist-assistant-companion-${VERSION}.apk"
+          (cd for-claude && zip -r "../dist/wrist-assistant-catch-up-notes-skill-${VERSION}.zip" catch-up-notes)
+          (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<NOTES
+          ## Wrist Assistant ${VERSION}
+
+          - \`wrist-assistant-${VERSION}.pbw\`: the watch app (also on the Pebble app store).
+          - \`wrist-assistant-companion-${VERSION}.apk\`: optional Android companion (Android 10+). Sideload it.
+          - \`wrist-assistant-catch-up-notes-skill-${VERSION}.zip\`: optional "catch up on my notes" skill for your own Claude (see \`for-claude/README.md\`).
+          - \`SHA256SUMS.txt\`: checksums.
+
+          Needs your own Anthropic API key. Not affiliated with or endorsed by Anthropic.
+          Setup and details: https://github.com/${GITHUB_REPOSITORY}#readme
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/* --title "Wrist Assistant ${VERSION}" \
+            --notes-file notes.md --generate-notes --verify-tag
+
+      - name: Remove signing files
+        if: always()
+        run: rm -f wrist-claude-android/release.jks wrist-claude-android/keystore.properties

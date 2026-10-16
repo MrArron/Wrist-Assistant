@@ -1,0 +1,71 @@
+{
+  "name": "wrist-claude",
+  "author": "MrArron",
+  "license": "MIT",
+  "version": "2.1.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Wrist Assistant",
+    "uuid": "12e8fcb0-c07f-4215-994f-c5e405f093fc",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery",
+      "gabbro",
+      "basalt",
+      "chalk",
+      "diorite",
+      "flint"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "ASK_TEXT",
+      "ASK_KIND",
+      "QUICK_INDEX",
+      "STATUS",
+      "CHUNK",
+      "CHUNK_FINAL",
+      "ERROR",
+      "REMINDER_TIME",
+      "REMINDER_TEXT",
+      "QUICK_NAMES",
+      "READY",
+      "APP_VERSION_KEY",
+      "COMPANION",
+      "ROUTE",
+      "SPEAK",
+      "CONFIRM_ID",
+      "CONFIRM_TEXT",
+      "CONFIRM_RESULT"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "MENU_ICON",
+          "file": "images/menu_icon.png",
+          "menuIcon": true
+        }
+      ]
+    },
+    "capabilities": [
+      "configurable"
+    ],
+    "companionApp": {
+      "android": {
+        "url": "https://github.com/MrArron/Wrist-Assistant/releases",
+        "apps": [
+          {
+            "package": "com.mrarron.wristclaude"
+          }
+        ]
+      }
+    }
+  }
+}

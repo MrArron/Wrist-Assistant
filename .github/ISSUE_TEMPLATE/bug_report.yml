@@ -1,0 +1,46 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste API keys, tokens, or personal messages, notification text, or questions you asked.**
+        Remove or replace them with made-up examples. For security problems, use the private advisory
+        link in SECURITY.md instead of this form.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Watch app, Android companion, Notes / Google Drive, Reminders, Other]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: watch
+    attributes:
+      label: Watch model and Pebble app version
+      placeholder: Pebble Time 2, Core Devices app 1.x
+  - type: input
+    id: version
+    attributes:
+      label: Wrist Assistant version (watch and companion, if installed)
+      placeholder: 2.1.0
+  - type: input
+    id: phone
+    attributes:
+      label: Phone model and Android version
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots (with secrets and personal text removed)
+      render: text
