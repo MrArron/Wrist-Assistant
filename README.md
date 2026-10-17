@@ -92,7 +92,7 @@ python3 tools/watch_size.py --platform emery
 for f in test/pkjs/*.test.js; do node $f; done
 ```
 
-Companion (JDK 17, Android SDK platform `android-37.2`, build-tools `37.0.0`):
+Companion (JDK 21, Android SDK platform `android-37.2`, build-tools `37.0.0`):
 ```
 cd wrist-claude-android
 echo "sdk.dir=$ANDROID_HOME" > local.properties
