@@ -13,7 +13,7 @@ python3 tools/watch_size.py --platform emery      # exits 1 if over the size bud
 for f in test/pkjs/*.test.js; do node $f; done    # phone-side tests
 ```
 
-Android companion (Android SDK platform `android-37.2`, build-tools `37.0.0`, JDK 17):
+Android companion (Android SDK platform `android-37.2`, build-tools `37.0.0`, JDK 21):
 
 ```
 cd wrist-claude-android

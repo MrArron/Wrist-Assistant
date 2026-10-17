@@ -40,7 +40,8 @@ jobs:
           uv tool install pebble-tool==5.0.40
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
-          pebble sdk install 4.33.1
+          # A cache hit restores the SDK, and `pebble sdk install` exits 1 when it is already installed.
+          pebble sdk list | grep -q '^4\.33\.1' || pebble sdk install 4.33.1
           pebble sdk activate 4.33.1 || true
 
       - name: Build watch app
@@ -68,7 +69,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
         with:
