@@ -51,6 +51,13 @@ jobs:
       - name: Size budget (fails if over sizeBudgetBytes in pebble-dev.json)
         run: python3 tools/watch_size.py --platform emery
 
+      - name: Upload watch app
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrist-assistant-pbw
+          path: wrist-claude/build/wrist-claude.pbw
+          retention-days: 14
+
       - name: Phone-side (pkjs) tests
         run: |
           for f in test/pkjs/*.test.js; do
@@ -86,3 +93,11 @@ jobs:
 
       - name: Unit tests, lint, debug APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
+
+      # Debug-signed, so it can't update an installed release APK (uninstall that first).
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrist-assistant-companion-debug-apk
+          path: wrist-claude-android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
