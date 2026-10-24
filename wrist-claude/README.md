@@ -22,6 +22,9 @@ Works on Pebble Time 2, Pebble Round 2, Pebble 2 Duo, Pebble Time, Pebble Time R
 
 Up/Down scroll an answer a screen at a time.
 
+**Quick Launch.** Set Wrist Assistant as a Quick Launch app (Pebble app → Settings → Quick Launch, then
+hold a button on the watch face). Opened that way, it goes straight to the microphone. Back takes you to the menu.
+
 ## Android companion (optional, v2)
 
 Install the Wrist Assistant companion app (`wrist-assistant-companion-*.apk`, from GitHub Releases) on your Android phone and
@@ -31,7 +34,11 @@ it takes over: your API key lives there, and Claude can also
 - check and add calendar events,
 - read your recent notifications and reply to them,
 - read an answer aloud on your phone (hold Up on an answer),
-- save notes and hand off conversations to your notes doc (version 2.1.0).
+- save notes and hand off conversations to your notes doc (version 2.1.0),
+- send something to your phone: say "send that to my phone" and a notification with **Copy** and **Share**
+  shows the text, often in more detail than fits on the watch (2.2.0),
+- use your phone's location for "near me" questions and local weather (2.2.0, optional),
+- keep a running estimate of what your API key has spent this month, with an optional monthly limit (2.2.0).
 
 Anything sent to another person, and anything triggered after Claude has read notifications or
 web results, asks you on the watch first: Select to send, Back to cancel.
@@ -67,6 +74,17 @@ Then say **"catch up on my notes"** in the Claude app, and it works through the 
   **Refresh now** reloads it, **Open context doc** opens the doc, and the switch
   **Use context from Claude** turns it off.
 - **Show a notification after a handoff**: on by default.
+
+## Location and usage (companion 2.2.0)
+
+**Location.** Allow Location on the Setup tab and choose **Allow all the time** (questions from the watch arrive
+while the phone app is in the background). The phone works out the city on the phone itself and sends only
+the place name (for example "Cocoa Beach, Florida, US") to Claude, never coordinates. Without the permission,
+or with **Use the phone's location** off in Settings, the City setting is used as before.
+
+**Usage.** Settings → Usage shows this month's estimate (and last month's): questions asked, tokens and web
+searches, priced at Anthropic's list prices. It is an estimate; your bill at console.anthropic.com is the real
+number. Set **Monthly limit** to stop asking Claude once the estimate reaches it; the watch then says so.
 
 ## Context from Claude
 

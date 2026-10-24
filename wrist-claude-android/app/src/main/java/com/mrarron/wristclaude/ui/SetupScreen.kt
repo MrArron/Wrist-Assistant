@@ -55,6 +55,7 @@ import com.mrarron.wristclaude.App
 import com.mrarron.wristclaude.data.SecureKeyStore
 import com.mrarron.wristclaude.phone.Notifications
 import com.mrarron.wristclaude.phone.GoogleAuth
+import com.mrarron.wristclaude.phone.PhoneLocation
 import com.mrarron.wristclaude.phone.PhoneTools
 import io.rebble.pebblekit2.client.DefaultPebbleAndroidAppPicker
 import io.rebble.pebblekit2.client.DefaultPebbleInfoRetriever
@@ -201,6 +202,18 @@ fun SetupScreen(modifier: Modifier = Modifier, onOpenNotes: () -> Unit = {}) {
         val calOk = remember(refresh) { granted(ctx, Manifest.permission.READ_CALENDAR) && granted(ctx, Manifest.permission.WRITE_CALENDAR) }
         PermissionRow("Calendar", "Read your events and add new ones.", calOk, "Allow") {
             permLauncher.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR))
+        }
+
+        val locCoarse = remember(refresh) { PhoneLocation.hasPermission(ctx) }
+        val locBackground = remember(refresh) { PhoneLocation.hasBackground(ctx) }
+        PermissionRow(
+            "Location (optional)",
+            if (!locCoarse) "For \"near me\" questions and local weather. Only your city is sent to Claude, never your exact position."
+            else "Choose \"Allow all the time\" so questions from the watch can use it while this app is in the background.",
+            locCoarse && locBackground, if (locCoarse) "Allow all the time" else "Allow",
+        ) {
+            if (!locCoarse) permLauncher.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION))
+            else permLauncher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
         }
 
         val listenerOk = remember(refresh) { PhoneTools.notificationAccess(ctx) }

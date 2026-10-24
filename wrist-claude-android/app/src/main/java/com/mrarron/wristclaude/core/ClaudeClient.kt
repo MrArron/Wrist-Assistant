@@ -52,6 +52,9 @@ interface ToolExecutor {
     /** Short background on what the user is working on (from the context doc), or null. */
     fun background(): String? = null
 
+    /** The phone's current city-level location, or null (no permission, off, or unknown). */
+    suspend fun location(): Place? = null
+
     /** Run a tool. Time spent waiting for the user's watch confirmation is reported via [ToolContext.pauseClock]. */
     suspend fun execute(name: String, input: JsonObject, ctx: ToolContext): ToolOutcome
 }
@@ -136,6 +139,7 @@ class ClaudeClient(
     private val transport: ClaudeTransport,
     private val clock: () -> Long = System::currentTimeMillis,
     private val nowProvider: () -> ZonedDateTime = ZonedDateTime::now,
+    private val usage: UsageMeter = UsageMeter.NONE,
 ) {
     companion object {
         const val MAX_TOKENS = 1024
@@ -176,6 +180,7 @@ class ClaudeClient(
         initiallyTainted: Boolean = false,
     ): AskResult = coroutineScope {
         if (apiKey.isNullOrEmpty()) return@coroutineScope AskResult.Error(Msg.NO_KEY)
+        if (usage.overLimit()) return@coroutineScope AskResult.Error(Usage.LIMIT_REACHED)
 
         val conversationBefore = history.filter { it.role == "user" || it.role == "assistant" }
         val messages = ArrayList<JsonElement>()
@@ -186,8 +191,9 @@ class ClaudeClient(
 
         val now = nowProvider()
         val avail = tools.availability()
-        val system = Prompt.buildSystemPrompt(settings, now, avail, tools.background())
-        val toolDefs = Prompt.buildTools(settings, avail)
+        val place = tools.location()
+        val system = Prompt.buildSystemPrompt(settings, now, avail, tools.background(), place)
+        val toolDefs = Prompt.buildTools(settings, avail, place)
         val offered = Prompt.toolNames(toolDefs)
 
         var pausedMs = 0L
@@ -250,6 +256,7 @@ class ClaudeClient(
             if (res.netError) return@coroutineScope fail(Msg.NETWORK)
             if (res.status != 200 || res.json == null) return@coroutineScope fail(errorText(res.status, res.json))
             val data = res.json
+            (data["usage"] as? JsonObject)?.let { usage.record(settings.model, it, newAsk = round == 1) }
             val content = data["content"] as? JsonArray ?: JsonArray(emptyList())
             val types = content.mapNotNull { (it as? JsonObject)?.get("type")?.let { t -> (t as? JsonPrimitive)?.content } }
             if ("server_tool_use" in types) cb.onStatus("Searching the web...")

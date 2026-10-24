@@ -233,10 +233,31 @@ can refer to the right project.
 - Settings: "Use context from Claude" (on by default), last refreshed time,
   Refresh now. The Notes screen shows the current context text.
 
+## Added in 2.2.0
+
+- **Quick Launch → dictation (watch).** When `launch_reason()` is `APP_LAUNCH_QUICK_LAUNCH` and an API key is
+  set, the watch opens the answer window and starts dictation right away (on both routes). Cancelling returns to
+  the menu.
+- **`send_to_phone {text, title?}`.** Posts a notification (channel "Sent from the watch") with the text
+  (≤ 3,000 characters), **Copy** and **Share**; tapping it opens the share sheet. Offered whenever drafts are.
+  Nothing goes to another person, so no watch confirmation. The prompt tells Claude the phone text may be fuller
+  than the watch answer.
+- **Phone location.** `ACCESS_COARSE_LOCATION` (+ `ACCESS_BACKGROUND_LOCATION`, since asks arrive in the
+  background). `PhoneLocation` takes the newest last-known fix (≤ 2 h old) or a fresh fused/network fix, reverse
+  geocodes it on the phone and keeps only city, region, ISO country and neighborhood (memory cache, fresh 15 min,
+  used up to 6 h when a lookup fails; lookups give up after 3 s). Warmed when the watch app opens. The place
+  replaces the City setting in the system prompt and in web search `user_location`. Setting "Use the phone's
+  location" (on by default; does nothing without the permission). Coordinates never leave the phone.
+- **Usage meter.** Every API response's `usage` is added to this month's totals (`UsageStore`, plain prefs, counts
+  only): questions, input tokens (incl. cache), output tokens, web searches, and an estimate at list prices
+  (Haiku 5.5 $0.10/$0.50, Sonnet 5.5 $2/$10, Opus 5.5 $4/$20 per million tokens; cache writes 1.25x, reads 0.1x
+  input; $0.01 per search). Settings → Usage shows this month and the previous one. "Monthly limit" (USD, 0 = none):
+  once the estimate reaches it, asks return "Monthly spending limit reached..." without calling the API.
+
 ## Companion app screens
 
 - **Setup checklist**: API key, Pebble app connection status, permissions (notifications to
-  post, calendar, notification access, display over other apps, battery optimization
+  post, calendar, location, notification access, display over other apps, battery optimization
   exemption), Google account for notes, each with a button that opens the right system screen.
 - **Settings**: everything from the v1 settings page plus default calendar, speech rate,
   auto-read, notes doc (create / pick / open), handoff notification.

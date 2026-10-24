@@ -9,6 +9,8 @@ import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import com.mrarron.wristclaude.core.ConfirmOutcome
 import com.mrarron.wristclaude.core.Notes
+import com.mrarron.wristclaude.core.Place
+import com.mrarron.wristclaude.core.Prompt
 import com.mrarron.wristclaude.core.Confirmer
 import com.mrarron.wristclaude.core.Recipients
 import com.mrarron.wristclaude.core.ReplyFlow
@@ -62,6 +64,8 @@ class PhoneTools(
 
     override fun background(): String? = NotesRepo.cachedContext()
 
+    override suspend fun location(): Place? = PhoneLocation.current(ctx)
+
     override suspend fun execute(name: String, input: JsonObject, ctx: ToolContext): ToolOutcome {
         // After web results / notifications entered the ask, actions they could have injected need approval.
         if (TaintGate.needsConfirm(name, input, ctx.tainted)) {
@@ -93,6 +97,7 @@ class PhoneTools(
 
     private suspend fun run(name: String, input: JsonObject, ctx: ToolContext): ToolOutcome = when (name) {
         "create_draft" -> createDraft(input)
+        "send_to_phone" -> sendToPhone(input)
         "set_alarm" -> setAlarm(input)
         "set_timer" -> setTimer(input)
         "get_calendar_events" -> withContext(Dispatchers.IO) { getEvents(input, ctx) }
@@ -147,6 +152,16 @@ class PhoneTools(
         } else {
             ToolOutcome("$what saved in the Wrist Assistant app's Drafts list (phone notifications are off). Nothing was sent.",
                 note = "$what saved in the Wrist Assistant app.")
+        }
+    }
+
+    private fun sendToPhone(input: JsonObject): ToolOutcome {
+        val text = input.str("text")?.take(Prompt.MAX_PHONE_TEXT) ?: return ToolOutcome.error("text is required.")
+        val title = input.str("title")?.let { Notes.field(it, 80) }?.takeIf { it.isNotBlank() } ?: "From your watch"
+        return if (Notifications.postToPhone(ctx, title, text)) {
+            ToolOutcome("Shown on the phone as a notification with Copy and Share.", note = "Sent to your phone.")
+        } else {
+            ToolOutcome.error("Phone notifications are off, so nothing could be shown. Tell the user to allow notifications in the Wrist Assistant phone app.")
         }
     }
 

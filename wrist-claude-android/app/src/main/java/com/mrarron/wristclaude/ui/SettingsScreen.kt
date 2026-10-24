@@ -37,6 +37,15 @@ import com.mrarron.wristclaude.App
 import com.mrarron.wristclaude.core.AppSettings
 import com.mrarron.wristclaude.core.QuickPrompt
 import com.mrarron.wristclaude.data.SettingsStore
+import com.mrarron.wristclaude.data.UsageStore
+import com.mrarron.wristclaude.core.MonthUsage
+import com.mrarron.wristclaude.core.Usage
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.TextButton
+import java.time.YearMonth
+import java.time.format.TextStyle
 import com.mrarron.wristclaude.phone.CalendarRepo
 import com.mrarron.wristclaude.phone.Speaker
 import java.util.Locale
@@ -60,6 +69,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     var calendarId by remember { mutableLongStateOf(initial.defaultCalendarId) }
     var speechRate by remember { mutableFloatStateOf(initial.speechRate) }
     var autoRead by remember { mutableStateOf(initial.autoRead) }
+    var usePhoneLocation by remember { mutableStateOf(initial.usePhoneLocation) }
+    var limitText by remember { mutableStateOf(if (initial.monthlyLimitUsd > 0) String.format(Locale.US, "%.2f", initial.monthlyLimitUsd) else "") }
+    val usageNow by UsageStore.current.collectAsState()
+    val usageBefore by UsageStore.previous.collectAsState()
     var savedNote by remember { mutableStateOf("") }
     val calendars = remember { CalendarRepo.calendars(ctx).filter { it.writable } }
 
@@ -67,6 +80,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     fun apply(base: AppSettings) = base.copy(
         model = model, length = length, webSearch = webSearch, units = units, city = city, aboutMe = aboutMe,
         quickPrompts = prompts.toList(), defaultCalendarId = calendarId, speechRate = speechRate, autoRead = autoRead,
+        usePhoneLocation = usePhoneLocation, monthlyLimitUsd = limitText.trim().removePrefix("$").toDoubleOrNull() ?: 0.0,
     )
 
     Column(
@@ -89,6 +103,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 city, { city = it.take(AppSettings.MAX_CITY) }, label = { Text("City (optional, for local answers)") },
                 singleLine = true, modifier = Modifier.fillMaxWidth(),
             )
+            SwitchRow("Use the phone's location when allowed (only the city is sent)", usePhoneLocation) { usePhoneLocation = it }
             OutlinedTextField(
                 aboutMe, { aboutMe = it.take(AppSettings.MAX_ABOUT) },
                 label = { Text("About me (optional)") },
@@ -127,15 +142,46 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             OutlinedButton(onClick = { Speaker.speak("This is how answers will sound.", rate = speechRate) }) { Text("Try the voice") }
         }
 
+        Section("Usage") {
+            val month = Usage.monthKey(YearMonth.now())
+            UsageLine(usageNow?.takeIf { it.month == month } ?: MonthUsage(month))
+            usageBefore?.let { UsageLine(it) }
+            Text(
+                "Estimated from Anthropic's list prices on this phone; your bill at console.anthropic.com is the real number.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedTextField(
+                limitText, { limitText = it.filter { c -> c.isDigit() || c == '.' }.take(7) },
+                label = { Text("Monthly limit in US dollars (empty = no limit)") },
+                supportingText = { Text("When this month's estimate reaches it, the watch says so instead of asking Claude.") },
+                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            TextButton(onClick = { UsageStore.reset() }) { Text("Reset counts") }
+        }
+
         Button(onClick = {
             val saved = SettingsStore.update(ctx) { apply(it) }
             prompts.clear(); prompts.addAll(saved.quickPrompts)
+            limitText = if (saved.monthlyLimitUsd > 0) String.format(Locale.US, "%.2f", saved.monthlyLimitUsd) else ""
             while (prompts.size < AppSettings.MAX_PROMPTS) prompts.add(QuickPrompt("", ""))
             App.get().engine.sendHello()
             savedNote = "Saved. The watch menu updates when Wrist Assistant is open."
         }, modifier = Modifier.fillMaxWidth()) { Text("Save") }
         if (savedNote.isNotEmpty()) Text(savedNote, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun UsageLine(u: MonthUsage) {
+    val name = runCatching { YearMonth.parse(u.month) }.getOrNull()
+        ?.let { it.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) + " " + it.year } ?: u.month
+    Text(
+        "$name: about " + String.format(Locale.US, "$%.2f", u.costUsd) +
+            " for ${u.asks} question${if (u.asks == 1L) "" else "s"}" +
+            " (${u.inputTokens} tokens in, ${u.outputTokens} out, ${u.searches} web search${if (u.searches == 1L) "" else "es"})",
+        style = MaterialTheme.typography.bodyMedium,
+    )
 }
 
 @Composable
