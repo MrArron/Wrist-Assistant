@@ -10,10 +10,12 @@ var MAX_LABEL = 24;
 var MAX_PROMPT = 200;
 var MAX_ABOUT = 300;
 var MAX_CITY = 60;
+// The 2.1.0 default fun fact prompt; saved copies are upgraded to the {topic} version.
+var OLD_FUN_FACT = 'Tell me a surprising fun fact.';
 
 function defaultQuickPrompts() {
   return [
-    { label: 'Fun fact', prompt: 'Tell me a surprising fun fact.' },
+    { label: 'Fun fact', prompt: 'Tell me a surprising fun fact about {topic}.' },
     { label: 'Motivate me', prompt: 'Give me a short, genuine bit of motivation for right now.' },
     { label: 'Word of the day', prompt: 'Give me an interesting English word of the day with its meaning and an example.' }
   ];
@@ -69,6 +71,7 @@ function validate(input) {
       if (!q || typeof q !== 'object') { continue; }
       var label = text.truncateBytes(text.sanitize(oneLine(q.label, MAX_LABEL)).replace(/\n/g, ' '), MAX_LABEL);
       var prompt = oneLine(q.prompt, MAX_PROMPT);
+      if (prompt === OLD_FUN_FACT) { prompt = defaultQuickPrompts()[0].prompt; }
       if (label && prompt) { list.push({ label: label, prompt: prompt }); }
     }
     out.quickPrompts = list;
@@ -203,7 +206,7 @@ var PAGE_TEMPLATE = [
   '<textarea id="aboutMe" maxlength="300" placeholder="Optional. Anything Claude should know when answering."></textarea>',
   '</div>',
   '<h2>Quick prompts</h2><div class="card" id="qps"></div>',
-  '<p class="hint">Up to 5. Leave a row empty to remove it. Label up to 24 characters.</p>',
+  '<p class="hint">Up to 5. Leave a row empty to remove it. Label up to 24 characters. Put {topic} in a prompt to get a random subject each time.</p>',
   '<div class="btns"><button id="cancel" type="button">Cancel</button><button id="save" type="button" class="primary">Save</button></div>',
   '<div class="foot">Wrist Assistant __VERSION__</div>',
   '<script>',

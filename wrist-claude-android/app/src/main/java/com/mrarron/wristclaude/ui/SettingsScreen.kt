@@ -98,7 +98,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
 
         Section("Quick prompts") {
-            Text("Up to 5. Leave a row empty to remove it. Label up to 24 characters.", style = MaterialTheme.typography.bodySmall)
+            Text("Up to 5. Leave a row empty to remove it. Label up to 24 characters. Put {topic} in a prompt to get a random subject each time.", style = MaterialTheme.typography.bodySmall)
             prompts.forEachIndexed { i, q ->
                 OutlinedTextField(
                     q.label, { prompts[i] = q.copy(label = it.take(AppSettings.MAX_LABEL)) },

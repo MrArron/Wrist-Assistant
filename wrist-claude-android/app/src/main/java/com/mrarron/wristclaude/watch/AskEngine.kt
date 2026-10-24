@@ -6,6 +6,7 @@ import com.mrarron.wristclaude.core.ChatMessage
 import com.mrarron.wristclaude.core.ClaudeClient
 import com.mrarron.wristclaude.core.Msg
 import com.mrarron.wristclaude.core.Notes
+import com.mrarron.wristclaude.core.QuickTopics
 import com.mrarron.wristclaude.core.TextUtil
 import com.mrarron.wristclaude.core.ToolExecutor
 import io.rebble.pebblekit2.common.model.PebbleDictionary
@@ -13,7 +14,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 /**
  * Handles messages from the watch (port of src/pkjs/index.js for the companion route).
@@ -25,6 +28,7 @@ class AskEngine(
     private val confirmer: WatchConfirmer,
     private val client: ClaudeClient,
     private val env: Env,
+    private val random: Random = Random.Default,
 ) {
     interface Env {
         fun settings(): AppSettings
@@ -52,6 +56,8 @@ class AskEngine(
     @Volatile private var conversationTainted = false
     private val askId = AtomicInteger(0)
     @Volatile private var current: Job? = null
+    /** {topic} quick prompt -> its last few answers, so they aren't repeated. */
+    private val recentByPrompt = ConcurrentHashMap<String, List<String>>()
 
     /** The hello: COMPANION=1 plus key status and quick prompt names. */
     fun helloDict(): PebbleDictionary = dict(
@@ -104,6 +110,7 @@ class AskEngine(
                     sendError("Hand off needs a Google account. Connect one in the Wrist Assistant phone app."); return@launch
                 }
             }
+            var topicPrompt: String? = null
             val userText = if (handoff) {
                 val comment = d.text(Keys.ASK_TEXT).orEmpty().trim()
                 Notes.HANDOFF_ASK + (if (comment.isNotEmpty()) " The user added: $comment" else "")
@@ -112,7 +119,12 @@ class AskEngine(
                 if (q == null) {
                     sendError("Quick prompt not found. Check settings."); return@launch
                 }
-                q.prompt
+                if (QuickTopics.hasTopic(q.prompt)) {
+                    topicPrompt = q.prompt
+                    QuickTopics.expand(q.prompt, recentByPrompt[q.prompt].orEmpty(), random)
+                } else {
+                    q.prompt
+                }
             } else {
                 d.text(Keys.ASK_TEXT).orEmpty()
             }.trim()
@@ -149,6 +161,8 @@ class AskEngine(
                     if (!handoff) {
                         conversation = (history + ChatMessage("user", userText) + ChatMessage("assistant", result.text)).takeLast(MAX_HISTORY)
                     }
+                    // Only clean answers go back into a later prompt.
+                    topicPrompt?.let { p -> if (!result.tainted) recentByPrompt[p] = QuickTopics.remember(recentByPrompt[p].orEmpty(), result.text) }
                     env.onAnswer(result.text)
                     sendAnswer(result.text)
                 }

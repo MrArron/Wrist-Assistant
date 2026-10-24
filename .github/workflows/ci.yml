@@ -41,7 +41,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
           # A cache hit restores the SDK, and `pebble sdk install` exits 1 when it is already installed.
-          pebble sdk list | grep -q '^4\.33\.1' || pebble sdk install 4.33.1
+          # Check the folder, not `pebble sdk list`: that also lists 4.33.1 as available when it isn't installed.
+          [ -d "$HOME/.local/share/pebble-sdk/SDKs/4.33.1" ] || pebble sdk install 4.33.1
           pebble sdk activate 4.33.1 || true
 
       - name: Build watch app
@@ -49,6 +50,13 @@ jobs:
 
       - name: Size budget (fails if over sizeBudgetBytes in pebble-dev.json)
         run: python3 tools/watch_size.py --platform emery
+
+      - name: Upload watch app
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrist-assistant-pbw
+          path: wrist-claude/build/wrist-claude.pbw
+          retention-days: 14
 
       - name: Phone-side (pkjs) tests
         run: |
@@ -85,3 +93,11 @@ jobs:
 
       - name: Unit tests, lint, debug APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
+
+      # Debug-signed, so it can't update an installed release APK (uninstall that first).
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrist-assistant-companion-debug-apk
+          path: wrist-claude-android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
