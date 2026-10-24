@@ -70,7 +70,7 @@ class ClaudeClientTest {
     @Test
     fun toolsOfferedOnlyWhenPermitted() = runTest {
         val noPerms = Prompt.toolNames(Prompt.buildTools(AppSettings(webSearch = false), ToolAvailability()))
-        assertEquals(setOf("set_reminder", "create_draft", "set_alarm", "set_timer"), noPerms)
+        assertEquals(setOf("set_reminder", "create_draft", "send_to_phone", "set_alarm", "set_timer"), noPerms)
         val all = Prompt.toolNames(
             Prompt.buildTools(AppSettings(), ToolAvailability(calendarRead = true, calendarWrite = true, notifications = true))
         )

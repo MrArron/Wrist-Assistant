@@ -8,9 +8,11 @@ import com.mrarron.wristclaude.core.ToolExecutor
 import com.mrarron.wristclaude.data.DraftStore
 import com.mrarron.wristclaude.data.SecureKeyStore
 import com.mrarron.wristclaude.data.SettingsStore
+import com.mrarron.wristclaude.data.UsageStore
 import com.mrarron.wristclaude.phone.GoogleAuth
 import com.mrarron.wristclaude.phone.Notifications
 import com.mrarron.wristclaude.phone.NotesRepo
+import com.mrarron.wristclaude.phone.PhoneLocation
 import com.mrarron.wristclaude.phone.PhoneTools
 import com.mrarron.wristclaude.phone.Speaker
 import com.mrarron.wristclaude.watch.AskEngine
@@ -33,7 +35,7 @@ class App : Application() {
 
     /** App-wide scope: outlives the listener service binding. */
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val client = ClaudeClient(OkHttpTransport())
+    val client = ClaudeClient(OkHttpTransport(), usage = UsageStore)
     val watchAppOpen = MutableStateFlow(false)
 
     lateinit var link: WatchLink
@@ -51,6 +53,7 @@ class App : Application() {
         SettingsStore.init(this)
         SecureKeyStore.init(this)
         DraftStore.init(this)
+        UsageStore.init(this)
         Speaker.init(this)
         Notifications.createChannels(this)
         GoogleAuth.init(this)
@@ -66,6 +69,7 @@ class App : Application() {
             override fun tools(): ToolExecutor = PhoneTools(app, confirmer, inForeground = false)
             override fun onWatchOpen() {
                 scope.launch { NotesRepo.onWatchOpen(app) }
+                scope.launch { PhoneLocation.refresh(app) }
             }
 
             override fun speak(on: Boolean) = if (on) Speaker.speak() else Speaker.stop()

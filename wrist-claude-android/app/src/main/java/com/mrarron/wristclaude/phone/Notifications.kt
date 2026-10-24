@@ -25,6 +25,7 @@ object Notifications {
     const val CH_ACTIONS = "actions"
     const val CH_WORK = "work"
     const val CH_NOTES = "notes"
+    const val CH_SENT = "sent"
     const val CLAUDE_APP = "com.anthropic.claude"
     const val CATCH_UP = "catch up on my notes"
     const val WORK_ID = 1
@@ -41,6 +42,9 @@ object Notifications {
                 },
                 NotificationChannel(CH_NOTES, "Handoffs", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     description = "A conversation was handed off to your notes doc"
+                },
+                NotificationChannel(CH_SENT, "Sent from the watch", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Answers and lists you asked to send to your phone"
                 },
                 NotificationChannel(CH_WORK, "Answering", NotificationManager.IMPORTANCE_MIN).apply {
                     description = "Shown while Claude is answering a question from the watch"
@@ -149,6 +153,35 @@ object Notifications {
         return true
     }
 
+    /** "send that to my phone": [text] with Copy / Share; tapping it opens the share sheet. */
+    fun postToPhone(ctx: Context, title: String, text: String): Boolean {
+        if (!canPost(ctx)) return false
+        val nid = (System.currentTimeMillis() % 100_000).toInt() + 4_000_000
+        val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        val share = PendingIntent.getActivity(
+            ctx, nid * 2,
+            Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            flags,
+        )
+        val copy = PendingIntent.getBroadcast(
+            ctx, nid * 2 + 1,
+            Intent(ctx, CopyTextReceiver::class.java).putExtra(CopyTextReceiver.EXTRA_TEXT, text).putExtra(CopyTextReceiver.EXTRA_NID, nid),
+            flags,
+        )
+        val n = Notification.Builder(ctx, CH_SENT)
+            .setSmallIcon(R.drawable.ic_stat_claude)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setContentIntent(share)
+            .addAction(Notification.Action.Builder(null, "Copy", copy).build())
+            .addAction(Notification.Action.Builder(null, "Share", share).build())
+            .build()
+        ctx.getSystemService(NotificationManager::class.java).notify(nid, n)
+        return true
+    }
+
     /** Fallback when the clock app can't be opened from the background: tap to run [intent]. */
     fun postTapToRun(ctx: Context, title: String, intent: Intent): Boolean {
         if (!canPost(ctx)) return false
@@ -176,6 +209,20 @@ class CopyDraftReceiver : BroadcastReceiver() {
         val d = DraftStore.get(intent.getLongExtra(EXTRA_ID, -1)) ?: return
         Notifications.copyToClipboard(context, d.body)
         Toast.makeText(context, "Draft copied", Toast.LENGTH_SHORT).show()
+        context.getSystemService(NotificationManager::class.java).cancel(intent.getIntExtra(EXTRA_NID, 0))
+    }
+}
+
+class CopyTextReceiver : BroadcastReceiver() {
+    companion object {
+        const val EXTRA_TEXT = "text"
+        const val EXTRA_NID = "notification_id"
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        val text = intent.getStringExtra(EXTRA_TEXT) ?: return
+        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Wrist Assistant", text))
+        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
         context.getSystemService(NotificationManager::class.java).cancel(intent.getIntExtra(EXTRA_NID, 0))
     }
 }

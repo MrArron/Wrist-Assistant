@@ -104,6 +104,20 @@ Each test: **Goal**, **Do**, **Expect**. Run them roughly in this order; later o
   Then ask about one of your current projects by name; a saved note should use that project name.
 - [ ] **D9 Voice hand off.** Say "hand this off". Expect: same as D5.
 
+### G. New in 2.2.0
+
+- [ ] **G1 Quick Launch.** Set Wrist Assistant as a Quick Launch app, hold that button on the watch face.
+  Expect: the microphone opens straight away; Back while listening shows the menu.
+- [ ] **G2 Normal launch.** Open it from the app list. Expect: the menu, as before (no microphone).
+- [ ] **G3 Send to phone.** Ask for a recipe, then say "send that to my phone". Expect: a "Sent to your phone"
+  reply and a phone notification with the full text; **Copy** copies it, **Share** opens the share sheet.
+- [ ] **G4 Location.** Setup → Location → Allow, then Allow all the time. Ask "what's the weather near me" with
+  the phone locked. Expect: the answer names where you actually are, not the City setting.
+- [ ] **G5 Location off.** Settings → turn off "Use the phone's location", Save, ask again. Expect: uses City.
+- [ ] **G6 Usage.** Settings → Usage after a few questions. Expect: question count and a small cost estimate.
+- [ ] **G7 Limit.** Set Monthly limit to 0.01, Save, ask twice. Expect: "Monthly spending limit reached..." on
+  the watch. Clear the limit after.
+
 ### E. Robustness
 
 - [ ] **E1 Phone locked / screen off** for a few minutes, then ask from the watch. Expect: works.

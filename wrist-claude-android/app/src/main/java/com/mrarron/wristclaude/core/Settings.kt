@@ -30,6 +30,10 @@ data class AppSettings(
     val defaultCalendarId: Long = -1L,
     val speechRate: Float = 1.0f,
     val autoRead: Boolean = false,
+    /** Use the phone's city-level location instead of [city] when location permission is granted. */
+    val usePhoneLocation: Boolean = true,
+    /** Estimated monthly API spend at which asks stop; 0 = no limit. */
+    val monthlyLimitUsd: Double = 0.0,
     // notes, handoffs and context (Google Docs)
     /** Doc ids the app created itself (drive.file); "" until created. Only valid with [docsAppCreated]. */
     val notesDoc: String = "",
@@ -82,6 +86,7 @@ data class AppSettings(
                 aboutMe = clean(s.aboutMe, MAX_ABOUT),
                 quickPrompts = prompts,
                 speechRate = if (s.speechRate.isFinite()) s.speechRate.coerceIn(0.5f, 2.0f) else 1.0f,
+                monthlyLimitUsd = if (s.monthlyLimitUsd.isFinite()) s.monthlyLimitUsd.coerceIn(0.0, Usage.MAX_LIMIT_USD) else 0.0,
                 notesDoc = Notes.usableDocId(s.notesDoc, s.docsAppCreated),
                 contextDoc = Notes.usableDocId(s.contextDoc, s.docsAppCreated),
                 docsAppCreated = s.docsAppCreated,
@@ -111,6 +116,8 @@ data class AppSettings(
                     defaultCalendarId = (o["defaultCalendarId"] as? JsonPrimitive)?.longOrNull ?: -1L,
                     speechRate = (o["speechRate"]?.jsonPrimitive?.doubleOrNull ?: 1.0).toFloat(),
                     autoRead = (o["autoRead"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                    usePhoneLocation = (o["usePhoneLocation"] as? JsonPrimitive)?.booleanOrNull ?: d.usePhoneLocation,
+                    monthlyLimitUsd = (o["monthlyLimitUsd"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
                     notesDoc = str("notesDoc") ?: d.notesDoc,
                     contextDoc = str("contextDoc") ?: d.contextDoc,
                     docsAppCreated = (o["docsAppCreated"] as? JsonPrimitive)?.booleanOrNull ?: false,
@@ -135,6 +142,8 @@ data class AppSettings(
         put("defaultCalendarId", defaultCalendarId)
         put("speechRate", speechRate.toDouble())
         put("autoRead", autoRead)
+        put("usePhoneLocation", usePhoneLocation)
+        put("monthlyLimitUsd", monthlyLimitUsd)
         put("notesDoc", notesDoc)
         put("contextDoc", contextDoc)
         put("docsAppCreated", docsAppCreated)
