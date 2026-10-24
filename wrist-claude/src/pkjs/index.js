@@ -2,6 +2,7 @@
 var text = require('./text');
 var settingsMod = require('./settings');
 var claude = require('./claude');
+var topics = require('./topics');
 
 var MAX_ANSWER_BYTES = 1500;
 var CHUNK_BYTES = 180;
@@ -13,6 +14,7 @@ var RETRY_DELAY_MS = 300;
 var settings = settingsMod.load();
 var conversation = []; // prior {role, content} messages
 var askId = 0;         // bumps on each new ask so stale results are ignored
+var recentByPrompt = {}; // {topic} quick prompt -> its last few answers, so they aren't repeated
 
 // ---------- outbox: one AppMessage at a time, wait for ACK ----------
 var outbox = [];
@@ -85,12 +87,18 @@ function handleAsk(payload) {
   settings = settingsMod.load();
   var kind = payload.ASK_KIND | 0;
   var userText = '';
+  var topicPrompt = '';
   if (kind === 3) { clearPending(); sendError('Hand off needs the phone companion.'); return; }
   if (kind === 2) {
     var idx = payload.QUICK_INDEX | 0;
     var q = settings.quickPrompts[idx];
     if (!q) { clearPending(); sendError('Quick prompt not found. Check settings.'); return; }
-    userText = q.prompt;
+    if (topics.hasTopic(q.prompt)) {
+      topicPrompt = q.prompt;
+      userText = topics.expand(q.prompt, recentByPrompt[q.prompt]);
+    } else {
+      userText = q.prompt;
+    }
   } else {
     userText = typeof payload.ASK_TEXT === 'string' ? payload.ASK_TEXT : '';
   }
@@ -115,6 +123,7 @@ function handleAsk(payload) {
     onDone: function (answer) {
       if (myId !== askId) { return; }
       conversation = history.concat([{ role: 'user', content: userText }, { role: 'assistant', content: answer }]).slice(-MAX_HISTORY);
+      if (topicPrompt) { recentByPrompt[topicPrompt] = topics.remember(recentByPrompt[topicPrompt], answer); }
       sendAnswer(answer);
     },
     onError: function (t) { if (myId === askId) { sendError(t); } }
