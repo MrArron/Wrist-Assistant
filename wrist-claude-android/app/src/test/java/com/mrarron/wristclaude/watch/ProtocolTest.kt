@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -209,5 +210,30 @@ class ProtocolTest {
         assertFalse(r2.isCompleted)
         advanceTimeBy(2_000)
         assertEquals(ConfirmOutcome.NO_ANSWER, r2.await())
+    }
+    @Test
+    fun topicQuickPromptIsRandomizedAndAvoidsLastAnswer() = runTest(StandardTestDispatcher()) {
+        val watch = FakeWatch()
+        val env = Env()
+        val asked = ArrayList<String>()
+        val transport = ClaudeTransport { _, body, _ ->
+            val last = body["messages"]!!.jsonArray.last().jsonObject["content"]
+            asked += (last as? kotlinx.serialization.json.JsonPrimitive)?.content ?: last.toString()
+            HttpResult(200, Json.parseToJsonElement("""{"stop_reason":"end_turn","content":[{"type":"text","text":"Fact number ${asked.size}"}]}""").jsonObject, false)
+        }
+        val link = WatchLink(watch, backgroundScope, retryDelayMs = 10)
+        val engine = AskEngine(this, link, WatchConfirmer(link), ClaudeClient(transport, clock = { 0L }), env, kotlin.random.Random(7))
+        engine.onMessage(dict(Keys.ASK_KIND to 2, Keys.QUICK_INDEX to 0, Keys.ROUTE to 1))
+        settle()
+        engine.onMessage(dict(Keys.ASK_KIND to 2, Keys.QUICK_INDEX to 0, Keys.ROUTE to 1))
+        settle()
+        engine.onMessage(dict(Keys.ASK_KIND to 2, Keys.QUICK_INDEX to 1, Keys.ROUTE to 1))
+        settle()
+        assertEquals(3, asked.size)
+        assertTrue(asked[0], asked[0].startsWith("Tell me a surprising fun fact about ") && !asked[0].contains("{topic}"))
+        assertFalse(asked[0].contains("Do not repeat"))
+        assertTrue(asked[1], asked[1].contains("Do not repeat any of these: \"Fact number 1\""))
+        assertTrue(asked[2], asked[2].contains("Give me a short, genuine bit of motivation for right now."))
+        assertFalse(asked[2].contains("Do not repeat"))
     }
 }

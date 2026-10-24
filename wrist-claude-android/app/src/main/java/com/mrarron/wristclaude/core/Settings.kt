@@ -54,9 +54,11 @@ data class AppSettings(
         const val MAX_PROMPT = 200
         const val MAX_ABOUT = 300
         const val MAX_CITY = 60
+        /** The 2.1.0 default fun fact prompt; saved copies are upgraded to the {topic} version. */
+        private const val OLD_FUN_FACT = "Tell me a surprising fun fact."
 
         fun defaultQuickPrompts() = listOf(
-            QuickPrompt("Fun fact", "Tell me a surprising fun fact."),
+            QuickPrompt("Fun fact", "Tell me a surprising fun fact about {topic}."),
             QuickPrompt("Motivate me", "Give me a short, genuine bit of motivation for right now."),
             QuickPrompt("Word of the day", "Give me an interesting English word of the day with its meaning and an example."),
         )
@@ -68,7 +70,7 @@ data class AppSettings(
         fun validate(s: AppSettings, keepEmptyPrompts: Boolean = false): AppSettings {
             val prompts = s.quickPrompts.mapNotNull { q ->
                 val label = TextUtil.truncateBytes(TextUtil.sanitize(oneLine(q.label, MAX_LABEL)).replace('\n', ' '), MAX_LABEL)
-                val prompt = oneLine(q.prompt, MAX_PROMPT)
+                val prompt = oneLine(q.prompt, MAX_PROMPT).let { if (it == OLD_FUN_FACT) defaultQuickPrompts()[0].prompt else it }
                 if (label.isNotEmpty() && prompt.isNotEmpty()) QuickPrompt(label, prompt)
                 else if (keepEmptyPrompts) QuickPrompt(label, prompt) else null
             }.take(MAX_PROMPTS)
