@@ -7,7 +7,9 @@ General-purpose Claude on the wrist. Press, speak, read a short answer.
 1. **Ask** — voice dictation on the watch, answer shown in a scrollable view.
 2. **Follow-up** — press Select on an answer to ask a follow-up in the same conversation.
 3. **Quick prompts** — up to 5 one-press prompts set on the phone settings page
-   (e.g. "Give me a fun fact", "Motivate me"). Shown in the watch menu.
+   (e.g. "Give me a fun fact", "Motivate me"). Shown in the watch menu. A prompt containing
+   `{topic}` gets a random seed word and angle on each press (`src/pkjs/topics.js`,
+   companion `QuickTopics.kt`), plus that prompt's last 5 answers as "do not repeat".
 4. **Reminders** — "remind me in 20 minutes to check the oven" makes Claude call a
    `set_reminder` tool; the watch schedules a wakeup that vibrates and shows the text,
    even if the app is closed. Snooze 10 min or dismiss.
