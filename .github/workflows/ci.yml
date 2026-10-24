@@ -41,7 +41,8 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           export PATH="$HOME/.local/bin:$PATH"
           # A cache hit restores the SDK, and `pebble sdk install` exits 1 when it is already installed.
-          pebble sdk list | grep -q '^4\.33\.1' || pebble sdk install 4.33.1
+          # Check the folder, not `pebble sdk list`: that also lists 4.33.1 as available when it isn't installed.
+          [ -d "$HOME/.local/share/pebble-sdk/SDKs/4.33.1" ] || pebble sdk install 4.33.1
           pebble sdk activate 4.33.1 || true
 
       - name: Build watch app
