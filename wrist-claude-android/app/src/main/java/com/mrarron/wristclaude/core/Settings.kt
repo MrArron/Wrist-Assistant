@@ -42,6 +42,8 @@ data class AppSettings(
     val useContext: Boolean = true,
     val handoffNotification: Boolean = true,
     val tidyDone: Boolean = true,
+    /** Look for a newer phone app on GitHub Releases once a day. */
+    val updateCheck: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_MODEL = "claude-haiku-5-5"
@@ -124,6 +126,7 @@ data class AppSettings(
                     useContext = (o["useContext"] as? JsonPrimitive)?.booleanOrNull ?: d.useContext,
                     handoffNotification = (o["handoffNotification"] as? JsonPrimitive)?.booleanOrNull ?: d.handoffNotification,
                     tidyDone = (o["tidyDone"] as? JsonPrimitive)?.booleanOrNull ?: d.tidyDone,
+                    updateCheck = (o["updateCheck"] as? JsonPrimitive)?.booleanOrNull ?: d.updateCheck,
                 )
             )
         }
@@ -150,6 +153,7 @@ data class AppSettings(
         put("useContext", useContext)
         put("handoffNotification", handoffNotification)
         put("tidyDone", tidyDone)
+        put("updateCheck", updateCheck)
     }
 
     /** QUICK_NAMES payload: labels joined by \n (<= 5 labels, each <= 24 bytes). */

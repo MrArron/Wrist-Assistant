@@ -1,6 +1,7 @@
 #include "common.h"
 
-// Sections: 0 = Ask, 1 = Quick prompts (if any), last = History + Reminders
+// Sections: 0 = Ask (+ an update notice when watch and phone versions differ),
+// 1 = Quick prompts (if any), last = History + Reminders
 static Window *s_window;
 static MenuLayer *s_menu;
 
@@ -10,7 +11,7 @@ static int tools_section(void) { return comm_quick_count() > 0 ? 2 : 1; }
 static uint16_t num_sections(MenuLayer *m, void *ctx) { return comm_quick_count() > 0 ? 3 : 2; }
 
 static uint16_t num_rows(MenuLayer *m, uint16_t section, void *ctx) {
-  if (section == 0) return 1;
+  if (section == 0) return comm_version_mismatch() ? 2 : 1;
   if ((int)section == quick_section()) return comm_quick_count();
   return 2;
 }
@@ -25,13 +26,19 @@ static void draw_header(GContext *g, const Layer *cell, uint16_t section, void *
 }
 
 static int16_t cell_height(MenuLayer *m, MenuIndex *idx, void *ctx) {
-  if (idx->section == 0) return PBL_IF_ROUND_ELSE(68, 60);
+  if (idx->section == 0 && idx->row == 0) return PBL_IF_ROUND_ELSE(68, 60);
+  if (idx->section == 0) return PBL_IF_ROUND_ELSE(menu_layer_is_index_selected(m, idx) ? 52 : 36, 44);
   return PBL_IF_ROUND_ELSE(menu_layer_is_index_selected(m, idx) ? 52 : 36, 44);
 }
 
 static void draw_row(GContext *g, const Layer *cell, MenuIndex *idx, void *ctx) {
   static char s_buf[32];
   static char s_sub[24];
+  if (idx->section == 0 && idx->row == 1) {
+    menu_cell_basic_draw(g, cell, comm_version_mismatch() == VER_PHONE_OLDER ? "Update phone app" : "Update watch app",
+                         "Versions differ", NULL);
+    return;
+  }
   if (idx->section == 0) {
     menu_cell_basic_draw(g, cell, "Ask Claude",
                          comm_key_set() ? "Press to talk" : "Add API key on phone", NULL);
@@ -54,7 +61,17 @@ static void draw_row(GContext *g, const Layer *cell, MenuIndex *idx, void *ctx) 
 }
 
 static void select_click(MenuLayer *m, MenuIndex *idx, void *ctx) {
-  if (idx->section == 0) {
+  if (idx->section == 0 && idx->row == 1) {
+    if (comm_version_mismatch() == VER_PHONE_OLDER) {
+      answer_win_view("Update phone app",
+                      "The Wrist Assistant phone app is older than this watch app. Update it from its "
+                      "Setup tab, or get the APK from GitHub Releases.");
+    } else {
+      answer_win_view("Update watch app",
+                      "The phone app is newer than this watch app. The Pebble app updates it by itself; "
+                      "open the Pebble app on your phone to get it sooner.");
+    }
+  } else if (idx->section == 0) {
     answer_win_ask(ASK_NEW, 0, NULL);
   } else if ((int)idx->section == quick_section()) {
     char label[32];

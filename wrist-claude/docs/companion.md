@@ -25,6 +25,22 @@ New in v2:
 | `CONFIRM_TEXT` | 10016 | P→W | cstring | What the user is approving, ≤ 300 bytes, e.g. "Reply to Mom in Messages:\nI'll be there at 6". |
 | `CONFIRM_RESULT` | 10017 | W→P | int | 1 = approved (Select), 0 = declined (Back or 60 s timeout). |
 
+Since 2.2.1, `APP_VERSION_KEY` (10011) carries the sender's version as an int in the companion's
+versionCode scheme (2.2.1 = 221; the watch's copy is `APP_VERSION_CODE` in `src/c/common.h`):
+the watch sends it with READY and the companion with its hello. If they differ, the watch menu shows
+an "Update phone app" / "Update watch app" row and the companion's Setup tab says which side is behind.
+A hello without it comes from a companion older than 2.2.1.
+
+### Phone app updates
+
+The companion isn't on the Play Store, so it checks GitHub's latest release of this repo once a day
+(app start or watch app open; Settings → App updates turns it off, "Check now" forces it). If a newer
+`wrist-assistant-companion-<version>.apk` is attached, it posts one notification per version and
+shows a card on the Setup tab: Download and install fetches the APK with DownloadManager into app
+storage and opens the system installer (Android asks once to allow "Install unknown apps").
+Only URLs under `github.com/MrArron/Wrist-Assistant/releases/download/` are fetched, and Android
+installs it only if it's signed with the same release key.
+
 `ASK_KIND` gains value **3 = hand off** (see "Notes and handoffs"): ASK_TEXT is empty or an
 optional spoken comment, and the companion hands off the current conversation.
 

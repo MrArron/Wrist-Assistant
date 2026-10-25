@@ -46,7 +46,11 @@ class ProtocolTest {
         var spoke = ArrayList<Boolean>()
         var answers = ArrayList<String>()
         var settings = AppSettings()
+        var version = 0
+        val watchVersions = ArrayList<Int?>()
         override fun settings() = settings
+        override fun appVersionCode() = version
+        override fun onWatchVersion(code: Int?) { watchVersions += code }
         override fun apiKey() = key
         override fun hasKey() = key != null
         override fun tools(): ToolExecutor = object : ToolExecutor {
@@ -95,6 +99,26 @@ class ProtocolTest {
         assertTrue(engine.onMessage(dict(Keys.READY to 1)))
         settle()
         assertEquals(0, watch.sent.single().ints()[Keys.READY])
+    }
+
+    @Test
+    fun helloCarriesAppVersionWhenKnown() = runTest(StandardTestDispatcher()) {
+        val watch = FakeWatch()
+        val (engine) = setup(watch, Env().apply { version = 221 })
+        engine.sendHello()
+        settle()
+        assertEquals(mapOf(Keys.COMPANION to 1, Keys.READY to 1, Keys.APP_VERSION to 221), watch.sent.single().ints())
+    }
+
+    @Test
+    fun readyReportsTheWatchVersion() = runTest(StandardTestDispatcher()) {
+        val watch = FakeWatch()
+        val env = Env()
+        val (engine) = setup(watch, env)
+        engine.onMessage(dict(Keys.READY to 1, Keys.APP_VERSION to 221))
+        engine.onMessage(dict(Keys.READY to 1)) // a 2.2.0 watch app doesn't send it
+        settle()
+        assertEquals(listOf(221, null), env.watchVersions)
     }
 
     @Test

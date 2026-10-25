@@ -9,6 +9,7 @@ import com.mrarron.wristclaude.data.DraftStore
 import com.mrarron.wristclaude.data.SecureKeyStore
 import com.mrarron.wristclaude.data.SettingsStore
 import com.mrarron.wristclaude.data.UsageStore
+import com.mrarron.wristclaude.phone.AppUpdater
 import com.mrarron.wristclaude.phone.GoogleAuth
 import com.mrarron.wristclaude.phone.Notifications
 import com.mrarron.wristclaude.phone.NotesRepo
@@ -58,10 +59,13 @@ class App : Application() {
         Notifications.createChannels(this)
         GoogleAuth.init(this)
         NotesRepo.init(this)
+        AppUpdater.init(this)
+        scope.launch { AppUpdater.check(this@App) }
 
         link = WatchLink(PebbleKitTransport(this), scope)
         confirmer = WatchConfirmer(link)
         val app = this
+        val versionCode = AppUpdater.installedVersionCode(this)
         engine = AskEngine(scope, link, confirmer, client, object : AskEngine.Env {
             override fun settings(): AppSettings = SettingsStore.current()
             override fun apiKey(): String? = SecureKeyStore.load(app)
@@ -70,7 +74,11 @@ class App : Application() {
             override fun onWatchOpen() {
                 scope.launch { NotesRepo.onWatchOpen(app) }
                 scope.launch { PhoneLocation.refresh(app) }
+                scope.launch { AppUpdater.check(app) }
             }
+
+            override fun appVersionCode() = versionCode
+            override fun onWatchVersion(code: Int?) = AppUpdater.onWatchVersion(code)
 
             override fun speak(on: Boolean) = if (on) Speaker.speak() else Speaker.stop()
             override fun onAnswer(answer: String) {

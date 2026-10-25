@@ -33,7 +33,7 @@ Later (not in v1): send answer to phone as a notification, canned replies, timel
 | `ERROR` | P→W | cstring | Error text to show instead of an answer (≤ 180 bytes) |
 | `REMINDER_TIME` | P→W | int | Unix time (seconds, UTC) for a reminder |
 | `REMINDER_TEXT` | P→W | cstring | Reminder text (≤ 60 bytes); sent together with REMINDER_TIME |
-| `APP_VERSION_KEY` | — | — | reserved |
+| `APP_VERSION_KEY` | both | int | Sender's version, 2.2.1 = 221 (W→P with READY, P→W in the companion hello; see companion.md) |
 
 Flow for one answer: watch sends ASK → phone sends STATUS (optional, repeatable) →
 phone may send REMINDER_TIME+REMINDER_TEXT → phone sends CHUNK messages in order,
