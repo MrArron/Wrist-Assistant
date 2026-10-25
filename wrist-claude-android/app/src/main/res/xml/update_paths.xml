@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Downloaded phone app updates (AppUpdater), shared with the system installer only -->
+<paths>
+    <external-files-path name="updates" path="Download/" />
+</paths>

@@ -22,12 +22,15 @@ jobs:
           js=$(sed -n "s/.*APP_VERSION = '\([0-9.]*\)'.*/\1/p" wrist-claude/src/pkjs/version.js | head -n1)
           vn=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wrist-claude-android/app/build.gradle.kts | head -n1)
           vc=$(sed -n 's/.*versionCode = \([^ ]*\).*/\1/p' wrist-claude-android/app/build.gradle.kts | head -n1)
+          wc=$(sed -n 's/^#define APP_VERSION_CODE *\([0-9]*\).*/\1/p' wrist-claude/src/c/common.h | head -n1)
           echo "tag=$tag package.json=$pkg version.js=$js versionName=$vn versionCode=$vc"
           fail=0
           [ "$pkg" = "$tag" ] || { echo "wrist-claude/package.json version ($pkg) does not match tag ($tag)" >&2; fail=1; }
           [ "$js" = "$tag" ] || { echo "APP_VERSION in wrist-claude/src/pkjs/version.js ($js) does not match tag ($tag)" >&2; fail=1; }
           [ "$vn" = "$tag" ] || { echo "versionName in wrist-claude-android/app/build.gradle.kts ($vn) does not match tag ($tag)" >&2; fail=1; }
           case "$vc" in ''|*[!0-9]*) echo "versionCode ('$vc') is not an integer" >&2; fail=1 ;; esac
+          # The watch and the companion compare these codes to spot a version mismatch.
+          [ "$wc" = "$vc" ] || { echo "APP_VERSION_CODE in wrist-claude/src/c/common.h ($wc) does not match versionCode ($vc)" >&2; fail=1; }
           [ "$fail" = 0 ] || exit 1
           echo "versionCode: $vc"
           echo "VERSION=$tag" >> "$GITHUB_ENV"

@@ -16,8 +16,8 @@ android {
         applicationId = "com.mrarron.wristclaude"
         minSdk = 29
         targetSdk = 37
-        versionCode = 220
-        versionName = "2.2.0"
+        versionCode = 221
+        versionName = "2.2.1"
     }
 
     // Release signing from keystore.properties (kept out of the source zip). Keep the keystore:

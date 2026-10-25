@@ -73,6 +73,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     var limitText by remember { mutableStateOf(if (initial.monthlyLimitUsd > 0) String.format(Locale.US, "%.2f", initial.monthlyLimitUsd) else "") }
     val usageNow by UsageStore.current.collectAsState()
     val usageBefore by UsageStore.previous.collectAsState()
+    var updateCheck by remember { mutableStateOf(initial.updateCheck) }
     var savedNote by remember { mutableStateOf("") }
     val calendars = remember { CalendarRepo.calendars(ctx).filter { it.writable } }
 
@@ -80,7 +81,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     fun apply(base: AppSettings) = base.copy(
         model = model, length = length, webSearch = webSearch, units = units, city = city, aboutMe = aboutMe,
         quickPrompts = prompts.toList(), defaultCalendarId = calendarId, speechRate = speechRate, autoRead = autoRead,
-        usePhoneLocation = usePhoneLocation, monthlyLimitUsd = limitText.trim().removePrefix("$").toDoubleOrNull() ?: 0.0,
+        usePhoneLocation = usePhoneLocation, updateCheck = updateCheck, monthlyLimitUsd = limitText.trim().removePrefix("$").toDoubleOrNull() ?: 0.0,
     )
 
     Column(
@@ -158,6 +159,15 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
             )
             TextButton(onClick = { UsageStore.reset() }) { Text("Reset counts") }
+        }
+
+        Section("App updates") {
+            SwitchRow("Check for a new phone app once a day", updateCheck) { updateCheck = it }
+            Text(
+                "Asks github.com for the latest Wrist Assistant release. Nothing about you is sent. The watch app updates through the Pebble app.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            UpdateStatus()
         }
 
         Button(onClick = {

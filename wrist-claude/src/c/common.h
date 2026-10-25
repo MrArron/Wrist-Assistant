@@ -1,6 +1,9 @@
 #pragma once
 #include <pebble.h>
 
+// ---- Version (same scheme as the companion's versionCode: 2.2.1 = 221; bump with package.json) ----
+#define APP_VERSION_CODE  221
+
 // ---- Limits ----
 #define ANSWER_BUF_SIZE   1600   // phone caps answers at 1,500 bytes
 #define QUESTION_BUF_SIZE 512
@@ -42,6 +45,8 @@ bool comm_send_ask(AskKind kind, const char *text, int quick_index);
 bool comm_send_speak(bool on);
 void comm_send_confirm(int32_t id, bool approved);
 bool comm_companion(void);              // the Android companion answered this launch
+typedef enum { VER_OK = 0, VER_PHONE_OLDER = 1, VER_WATCH_OLDER = 2 } VersionMismatch;
+VersionMismatch comm_version_mismatch(void);   // companion vs this watch app
 void comm_send_ready(void);
 bool comm_key_set(void);
 const char *comm_quick_names(void);   // '\n' separated

@@ -26,9 +26,11 @@ object Notifications {
     const val CH_WORK = "work"
     const val CH_NOTES = "notes"
     const val CH_SENT = "sent"
+    const val CH_UPDATES = "updates"
     const val CLAUDE_APP = "com.anthropic.claude"
     const val CATCH_UP = "catch up on my notes"
     const val WORK_ID = 1
+    const val UPDATE_ID = 5_000_001
 
     fun createChannels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
@@ -45,6 +47,9 @@ object Notifications {
                 },
                 NotificationChannel(CH_SENT, "Sent from the watch", NotificationManager.IMPORTANCE_DEFAULT).apply {
                     description = "Answers and lists you asked to send to your phone"
+                },
+                NotificationChannel(CH_UPDATES, "App updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "A new version of the phone app is available or ready to install"
                 },
                 NotificationChannel(CH_WORK, "Answering", NotificationManager.IMPORTANCE_MIN).apply {
                     description = "Shown while Claude is answering a question from the watch"
@@ -179,6 +184,36 @@ object Notifications {
             .addAction(Notification.Action.Builder(null, "Share", share).build())
             .build()
         ctx.getSystemService(NotificationManager::class.java).notify(nid, n)
+        return true
+    }
+
+    /** "Update available": tapping opens the app, where the Setup tab downloads and installs it. */
+    fun postUpdate(ctx: Context, version: String): Boolean {
+        if (!canPost(ctx)) return false
+        val n = Notification.Builder(ctx, CH_UPDATES)
+            .setSmallIcon(R.drawable.ic_stat_claude)
+            .setContentTitle("Wrist Assistant $version is available")
+            .setContentText("Tap to download and install the phone app update.")
+            .setContentIntent(openApp(ctx))
+            .setAutoCancel(true)
+            .build()
+        ctx.getSystemService(NotificationManager::class.java).notify(UPDATE_ID, n)
+        return true
+    }
+
+    /** The APK finished downloading: tap to open the system installer. */
+    fun postUpdateReady(ctx: Context, version: String): Boolean {
+        if (!canPost(ctx)) return false
+        val install = AppUpdater.installIntent(ctx) ?: return false
+        val pi = PendingIntent.getActivity(ctx, UPDATE_ID, install, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val n = Notification.Builder(ctx, CH_UPDATES)
+            .setSmallIcon(R.drawable.ic_stat_claude)
+            .setContentTitle("Wrist Assistant $version downloaded")
+            .setContentText("Tap to install.")
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .build()
+        ctx.getSystemService(NotificationManager::class.java).notify(UPDATE_ID, n)
         return true
     }
 

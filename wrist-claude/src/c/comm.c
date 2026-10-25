@@ -4,11 +4,16 @@ static char s_quick_names[QUICK_NAMES_SIZE];
 static bool s_key_set;
 static bool s_ask_in_flight;
 static bool s_companion;   // per launch: set once the companion says hello
+static int32_t s_phone_version;   // companion's version from its hello; 0 = older than 2.2.1
 
 static void inbox_received(DictionaryIterator *iter, void *context) {
   Tuple *t;
   Tuple *comp = dict_find(iter, MESSAGE_KEY_COMPANION);
-  if (comp && comp->value->int32 == 1) s_companion = true;
+  if (comp && comp->value->int32 == 1) {
+    s_companion = true;
+    Tuple *ver = dict_find(iter, MESSAGE_KEY_APP_VERSION_KEY);
+    s_phone_version = ver ? ver->value->int32 : 0;
+  }
   // Once the companion is here, its settings win over the Pebble-app JS
   bool settings_ok = !s_companion || comp;
 
@@ -118,10 +123,16 @@ void comm_send_confirm(int32_t id, bool approved) {
 
 bool comm_companion(void) { return s_companion; }
 
+VersionMismatch comm_version_mismatch(void) {
+  if (!s_companion || s_phone_version == APP_VERSION_CODE) return VER_OK;
+  return s_phone_version < APP_VERSION_CODE ? VER_PHONE_OLDER : VER_WATCH_OLDER;
+}
+
 void comm_send_ready(void) {
   DictionaryIterator *out;
   if (app_message_outbox_begin(&out) != APP_MSG_OK) return;
   dict_write_int32(out, MESSAGE_KEY_READY, 1);
+  dict_write_int32(out, MESSAGE_KEY_APP_VERSION_KEY, APP_VERSION_CODE);
   app_message_outbox_send();
 }
 

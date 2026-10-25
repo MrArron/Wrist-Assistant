@@ -13,7 +13,8 @@
     "scheme": "2.X.Y: X = phase in progress, Y counts app-changing PRs within it; a new phase sets X and resets Y to 0; docs-only PRs leave it alone.",
     "files": [
       { "path": "package.json", "kind": "package-json" },
-      { "path": "src/pkjs/version.js", "regex": "APP_VERSION = '([0-9.]+)'" }
+      { "path": "src/pkjs/version.js", "regex": "APP_VERSION = '([0-9.]+)'" },
+      { "path": "src/c/common.h", "regex": "APP_VERSION_CODE +([0-9]+)", "note": "versionCode scheme: 2.2.1 = 221" }
     ]
   },
   "github": { "bugLabel": "bug", "areaLabels": ["watch", "phone"], "publicRepo": true },

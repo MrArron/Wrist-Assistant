@@ -122,6 +122,8 @@ fun SetupScreen(modifier: Modifier = Modifier, onOpenNotes: () -> Unit = {}) {
             style = MaterialTheme.typography.bodySmall,
         )
 
+        UpdateCard()
+
         // ---- API key ----
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

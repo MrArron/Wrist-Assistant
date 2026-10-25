@@ -39,6 +39,10 @@ class AskEngine(
         fun onAnswer(answer: String)
         /** The watch app opened: retry queued notes, refresh the context doc. */
         fun onWatchOpen() {}
+        /** This app's versionCode, sent in the hello so the watch can spot a mismatch; 0 = don't send. */
+        fun appVersionCode(): Int = 0
+        /** The watch app's version from its READY (null: a watch app older than 2.2.1). */
+        fun onWatchVersion(code: Int?) {}
         /** Keep the process alive while [block] runs (foreground service). */
         suspend fun <T> keepAlive(block: suspend () -> T): T
     }
@@ -59,12 +63,16 @@ class AskEngine(
     /** {topic} quick prompt -> its last few answers, so they aren't repeated. */
     private val recentByPrompt = ConcurrentHashMap<String, List<String>>()
 
-    /** The hello: COMPANION=1 plus key status and quick prompt names. */
-    fun helloDict(): PebbleDictionary = dict(
-        Keys.COMPANION to 1,
-        Keys.READY to (if (env.hasKey()) 1 else 0),
-        Keys.QUICK_NAMES to env.settings().quickNames(),
-    )
+    /** The hello: COMPANION=1 plus key status, quick prompt names and this app's version. */
+    fun helloDict(): PebbleDictionary {
+        val base = listOf<Pair<UInt, Any>>(
+            Keys.COMPANION to 1,
+            Keys.READY to (if (env.hasKey()) 1 else 0),
+            Keys.QUICK_NAMES to env.settings().quickNames(),
+        )
+        val version = env.appVersionCode()
+        return dict(*(if (version > 0) base + (Keys.APP_VERSION to version) else base).toTypedArray())
+    }
 
     fun sendHello() {
         scope.launch { link.enqueue(helloDict()) }
@@ -87,6 +95,7 @@ class AskEngine(
             return true
         }
         if (d.containsKey(Keys.READY)) {
+            env.onWatchVersion(d.int(Keys.APP_VERSION))
             sendHello()
             env.onWatchOpen()
             return true

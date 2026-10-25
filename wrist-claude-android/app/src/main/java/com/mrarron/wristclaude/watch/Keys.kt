@@ -19,6 +19,8 @@ object Keys {
     const val REMINDER_TEXT = 10008u
     const val QUICK_NAMES = 10009u
     const val READY = 10010u
+    /** Both ways: the sender's version in the versionCode scheme (2.3.0 = 230). Watch: with READY; phone: in the hello. */
+    const val APP_VERSION = 10011u
     const val COMPANION = 10012u
     const val ROUTE = 10013u
     const val SPEAK = 10014u

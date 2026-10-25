@@ -51,7 +51,9 @@ Details: [`wrist-claude/README.md`](wrist-claude/README.md).
    You can also sideload the `.pbw` from [Releases](https://github.com/MrArron/Wrist-Assistant/releases).
 2. **Companion (optional):** download `wrist-assistant-companion-*.apk` from
    [Releases](https://github.com/MrArron/Wrist-Assistant/releases) and install it (allow installs from your
-   browser or file manager when Android asks). It is not on the Play Store.
+   browser or file manager when Android asks). It is not on the Play Store. From 2.2.1 on, the
+   companion checks for new versions itself once a day and can download and install them (Settings →
+   App updates).
 
 ## Setup
 
@@ -66,7 +68,8 @@ Details: [`wrist-claude/README.md`](wrist-claude/README.md).
 ## Privacy
 
 - Your API key stays on your phone and is sent only to `api.anthropic.com`.
-- Your questions go only to Anthropic's API. There is no other server and no analytics.
+- Your questions go only to Anthropic's API. There is no other server and no analytics. The
+  companion's daily update check asks GitHub for the latest release and sends nothing about you.
 - Notes documents live in your own Google Drive. The companion asks only for the `drive.file` scope,
   so it can open only files it created itself.
 - Notification text is read only when you ask, and sending anything to another person needs your
