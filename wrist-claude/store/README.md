@@ -1,7 +1,7 @@
 # Store assets for Wrist Assistant
 
 Assets and listing text for the Pebble appstore (Core Devices / Rebble). Everything here is original
-artwork (a watch with a speech bubble); there is no Anthropic logo or branding. Screenshots come from
+artwork; the store icons match the Android companion's launcher icon (a white watch with an orange spark on orange, rendered from `drawable/ic_launcher_foreground.xml` since 2.3.0). There is no Anthropic logo or branding. Screenshots come from
 the emulator using a throwaway local mock server and made-up sample questions, so no personal data
 or real API output appears in them.
 
