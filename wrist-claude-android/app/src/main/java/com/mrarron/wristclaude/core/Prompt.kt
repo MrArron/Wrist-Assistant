@@ -80,6 +80,8 @@ object Prompt {
             lines += "If the user wants to continue later, in the Claude app or on another device (\"continue on Claude\", \"hand this off\", " +
                 "\"pick this up later\"), call create_handoff. If they want to save something to look at or follow up on later " +
                 "(\"note: ...\", \"follow up on ... later\", \"add to my notes\"), call save_note. " +
+                "If they address a note to an assistant (\"note for Duet: ...\", \"tell Duet to ...\"), call save_note with " +
+                "project set to that assistant's name, e.g. \"Duet\". " +
                 "Then reply in one short line, e.g. \"Handed off - say catch up on my notes in Claude.\""
         } else {
             lines += "If the user asks to hand off, continue on Claude, or save a note, tell them notes need a Google account connected in the Wrist Assistant phone app."
@@ -245,7 +247,7 @@ object Prompt {
                             put("description", "note = something to remember or file; followup = something to look into or do later.")
                             putJsonArray("enum") { add("note"); add("followup") }
                         }
-                        put("project", prop("string", "Optional short project name the note belongs to."))
+                        put("project", prop("string", "Optional short project name the note belongs to, or the assistant it is addressed to (e.g. Duet)."))
                     }
                     putJsonArray("required") { add("text"); add("kind") }
                 }

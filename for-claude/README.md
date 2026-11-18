@@ -39,6 +39,11 @@ More on how skills are uploaded: [Using skills in Claude](https://claude.com/doc
 Follow [`context-refresh-task.md`](context-refresh-task.md). It explains how to create the scheduled
 task and gives the prompt to paste in.
 
+## Claude Duet
+
+If you use Claude Duet, it can work through the same notes doc, and its messages can come to your watch.
+See [`duet.md`](duet.md).
+
 ## Optional reference
 
 [`HANDOFF-for-main-Claude.md`](HANDOFF-for-main-Claude.md) explains the two docs and the entry format

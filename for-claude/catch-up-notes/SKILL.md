@@ -29,8 +29,12 @@ Each entry starts with a header line:
 - KIND: NOTE (something to remember or file), FOLLOWUP (something to look into or do), HANDOFF
   (a watch conversation to continue; it has Goal, Where it stands, Next step and a Conversation
   block).
-- project: free text, may be empty.
-- Everything above the first header (title and intro text) is not an entry; leave it alone.
+- project: free text, may be empty. If it names another assistant (for example "Duet", from "note for
+  Duet: ..." on the watch), that assistant handles it: leave the entry alone and don't count it as open.
+- Everything above the first header (title, intro text and the "How to handle entries" rules) is not
+  an entry; leave it alone.
+- Another assistant (such as Claude Duet) may work through the same doc. Respect its Result and
+  Waiting on lines, and don't redo an item it marked DONE.
 
 ## 3. Show the list first
 

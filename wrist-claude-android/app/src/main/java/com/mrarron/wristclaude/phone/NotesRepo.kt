@@ -57,6 +57,7 @@ object NotesRepo {
     private const val CREATE_API = "https://docs.googleapis.com/v1/documents"
     private const val SEEDED = "seeded_docs"
     private const val DOCS_NOTICE = "docs_notice"
+    private const val GUIDED = "guided_docs"
     private val JSON_TYPE = "application/json".toMediaType()
 
     private val http: OkHttpClient by lazy {
@@ -675,9 +676,48 @@ object NotesRepo {
         }
     }
 
+    /**
+     * Makes sure the notes doc starts with the "How to handle entries" guide ([Notes.GUIDE]), so Claude Duet or any
+     * other assistant reading the doc follows the same rules. New docs get it from the seed; docs made before 2.3.0
+     * get it inserted once, just above the first entry. Returns a short status.
+     */
+    suspend fun addGuide(ctx: Context): String = withContext(Dispatchers.IO) {
+        if (!GoogleAuth.connected.value) return@withContext "Connect your Google account first."
+        ensureNotesDoc(ctx)?.let { return@withContext it }
+        val doc = SettingsStore.current().notesDoc
+        val got = call(ctx) { token ->
+            Request.Builder().url(API + doc + "?fields=revisionId,body").header("Authorization", "Bearer $token").get().build()
+        }
+        val json = when (got) {
+            is Http.Ok -> got.json
+            is Http.Fail -> { noteForbidden(got, true); return@withContext got.message }
+        }
+        if (Notes.hasGuide(Notes.plainText(json))) {
+            markGuided(ctx, doc)
+            return@withContext "The notes doc already has the guide."
+        }
+        val rev = NotesTidy.revisionId(json?.toString())
+        val res = call(ctx) { token ->
+            Request.Builder().url(API + doc + ":batchUpdate").header("Authorization", "Bearer $token")
+                .post(Notes.guideRequest(Notes.guideInsertIndex(json), rev).toString().toRequestBody(JSON_TYPE)).build()
+        }
+        when (res) {
+            is Http.Ok -> { markGuided(ctx, doc); "Added the guide to the top of your notes doc." }
+            is Http.Fail -> if (res.status == 400) "The doc changed while adding the guide; try again." else res.message
+        }
+    }
+
+    private fun markGuided(ctx: Context, id: String) {
+        prefs(ctx).edit { putStringSet(GUIDED, setOf(id)) }
+    }
+
+    private fun isGuided(ctx: Context, id: String) = id in prefs(ctx).getStringSet(GUIDED, emptySet()).orEmpty()
+
     /** Called when the watch app opens: retry queued notes, refresh old context, tidy once a day, quietly. */
     suspend fun onWatchOpen(ctx: Context) {
         runCatching { flush(ctx) }
+        val notesDoc = SettingsStore.current().notesDoc
+        if (GoogleAuth.connected.value && notesDoc.isNotBlank() && !isGuided(ctx, notesDoc)) runCatching { addGuide(ctx) }
         if (SettingsStore.current().tidyDone && GoogleAuth.connected.value && tidyIsDue()) runCatching { tidy(ctx) }
         if (SettingsStore.current().useContext && contextIsStale()) runCatching { refreshContext(ctx) }
     }

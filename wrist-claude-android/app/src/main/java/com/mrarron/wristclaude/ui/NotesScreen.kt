@@ -183,6 +183,8 @@ fun NotesScreen(modifier: Modifier = Modifier) {
             }
         }
 
+        DuetCard(connected, settings.notesDoc) { status = it }
+
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Context from Claude", style = MaterialTheme.typography.titleMedium)
@@ -216,6 +218,53 @@ fun NotesScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Setup for Claude Duet (or any assistant with Google Docs access): copy or share a one-time instruction that
+ * tells it to watch the notes doc, and add the "How to handle entries" guide to older docs.
+ */
+@Composable
+private fun DuetCard(connected: Boolean, notesDoc: String, onStatus: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var onlyAddressed by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    val instruction = Notes.assistantInstruction(notesDoc.takeIf { it.isNotBlank() }?.let { Notes.docUrl(it) }, onlyAddressed)
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Use with Claude Duet", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Claude Duet (or another assistant that can read your Google Docs) can watch this notes doc and work through " +
+                    "open items for you. Send it the instruction below once. It checks every few hours, so this suits " +
+                    "\"do this later\" notes, not quick answers.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Only notes addressed to Duet (\"note for ${Notes.DUET}: ...\")", Modifier.weight(1f))
+                Switch(onlyAddressed, { onlyAddressed = it })
+            }
+            Text(instruction, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = {
+                    Notifications.copyToClipboard(ctx, instruction)
+                    onStatus("Instruction copied. Paste it into Duet.")
+                }) { Text("Copy") }
+                OutlinedButton(onClick = {
+                    start(ctx, Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, instruction), "Send to")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text("Share") }
+            }
+            Text(
+                "Your notes doc starts with short \"How to handle entries\" rules so every assistant marks items the same way. " +
+                    "Docs made before 2.3.0 get them added once automatically.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onClick = {
+                scope.launch { busy = true; onStatus(NotesRepo.addGuide(ctx)); busy = false }
+            }, enabled = connected && !busy) { Text("Add rules to doc now") }
         }
     }
 }

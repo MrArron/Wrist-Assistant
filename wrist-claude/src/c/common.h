@@ -2,7 +2,7 @@
 #include <pebble.h>
 
 // ---- Version (same scheme as the companion's versionCode: 2.2.1 = 221; bump with package.json) ----
-#define APP_VERSION_CODE  221
+#define APP_VERSION_CODE  230
 
 // ---- Limits ----
 #define ANSWER_BUF_SIZE   1600   // phone caps answers at 1,500 bytes

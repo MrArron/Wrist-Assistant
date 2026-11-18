@@ -270,6 +270,30 @@ can refer to the right project.
   input; $0.01 per search). Settings → Usage shows this month and the previous one. "Monthly limit" (USD, 0 = none):
   once the estimate reaches it, asks return "Monthly spending limit reached..." without calling the API.
 
+## Added in 2.3.0 (Claude Duet)
+
+Claude Duet has no API, SDK or intent, so both routes are indirect and optional. User guide: `for-claude/duet.md`.
+
+- **Rules at the top of the notes doc.** `Notes.GUIDE` ("How to handle entries ...": header format, statuses,
+  kinds, Result / Waiting on lines, "if the project names an assistant, only that assistant handles it") is part of
+  the seed after the intro and a blank line. No guide line starts with `===`, so `openCount`, the tidy and the skill
+  never see it as an entry. Older docs get it once (`NotesRepo.addGuide`, run on watch open until it succeeds,
+  remembered per doc id): inserted at the start index of the first entry header paragraph, guarded by
+  `writeControl.requiredRevisionId`, or appended when the doc has no entries. Notes tab button "Add rules to doc now".
+- **Instruction for Duet.** Notes tab → "Use with Claude Duet" builds `Notes.assistantInstruction(docUrl,
+  onlyAddressed)` with Copy and Share. `onlyAddressed` limits Duet to entries whose project is `Duet`.
+- **Addressed notes.** The prompt tells Claude that "note for Duet: ..." / "tell Duet to ..." means `save_note`
+  with `project = "Duet"`. The catch-up skill skips entries whose project names another assistant.
+- **Relay to watch** (Settings, off by default). `relayEnabled` + `relayApps` (≤ 8 package names, validated). The
+  notification listener marks notifications from those apps as `relayed` (the buffer evicts them last) and
+  `WatchRelay` re-posts them on channel "Relayed to your watch" (IMPORTANCE_HIGH): title "App: title" (≤ 80),
+  text (≤ 400), original tap action, **Reply** (RemoteInput, only when the original has a free-form reply; sent
+  through the original action; the user dictates it on the watch, so no extra confirmation) and **Save to notes**
+  (FOLLOWUP entry "From App: ...", no project). Same key + same text is relayed once. The app picker lists apps
+  seen by the listener since it started, plus a typed package name. Nothing is written to disk or sent to Claude.
+  The Pebble app mirrors the relayed notification; the user allows Wrist Assistant there and mutes the source app
+  to avoid two buzzes. No watch code or message keys changed.
+
 ## Companion app screens
 
 - **Setup checklist**: API key, Pebble app connection status, permissions (notifications to

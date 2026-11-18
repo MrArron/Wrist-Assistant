@@ -40,7 +40,10 @@ A: ...
 - **Kind**: `NOTE` (remember or file it), `FOLLOWUP` (look into or do it), `HANDOFF` (continue
   this watch conversation from "Next step").
 - **Project**: free text, may be empty. It matches a project name from the context doc when the
-  watch could tell.
+  watch could tell. When it names an assistant (for example `Duet`, from "note for Duet: ..."), only
+  that assistant handles the entry.
+- The doc starts with a short "How to handle entries" block that repeats these rules for any assistant
+  reading it (for example Claude Duet, see `duet.md`). It is not an entry.
 
 ## Lifecycle (who does what)
 

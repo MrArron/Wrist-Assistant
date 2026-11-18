@@ -55,11 +55,13 @@ class NotesTest {
     @Test
     fun createAndSeedRequests() {
         assertEquals("""{"title":"Wrist Assistant Notes"}""", Notes.createRequest(Notes.NOTES_TITLE).toString())
-        assertEquals(
-            "Wrist Assistant Notes\nNotes and handoffs from the Pebble watch. New entries are added at the bottom. " +
-                "Say \"catch up on my notes\" in Claude to work through the OPEN ones.\n",
-            Notes.NOTES_SEED,
+        assertTrue(
+            Notes.NOTES_SEED.startsWith(
+                "Wrist Assistant Notes\nNotes and handoffs from the Pebble watch. New entries are added at the bottom. " +
+                    "Say \"catch up on my notes\" in Claude to work through the OPEN ones.\n\n" + Notes.GUIDE_MARKER,
+            ),
         )
+        assertTrue(Notes.NOTES_SEED.endsWith(Notes.GUIDE + "\n"))
         val body = Notes.seedRequest("hi").toString()
         assertEquals("""{"requests":[{"insertText":{"text":"hi","location":{"index":1}}}]}""", body)
     }

@@ -44,6 +44,11 @@ data class AppSettings(
     val tidyDone: Boolean = true,
     /** Look for a newer phone app on GitHub Releases once a day. */
     val updateCheck: Boolean = true,
+    // relay to watch (off by default)
+    /** Re-post notifications from [relayApps] with watch actions (Reply, Save to notes). */
+    val relayEnabled: Boolean = false,
+    /** Package names the user picked, e.g. an assistant app such as Claude Duet. */
+    val relayApps: List<String> = emptyList(),
 ) {
     companion object {
         const val DEFAULT_MODEL = "claude-haiku-5-5"
@@ -92,6 +97,7 @@ data class AppSettings(
                 notesDoc = Notes.usableDocId(s.notesDoc, s.docsAppCreated),
                 contextDoc = Notes.usableDocId(s.contextDoc, s.docsAppCreated),
                 docsAppCreated = s.docsAppCreated,
+                relayApps = Relay.cleanApps(s.relayApps),
             )
         }
 
@@ -127,6 +133,9 @@ data class AppSettings(
                     handoffNotification = (o["handoffNotification"] as? JsonPrimitive)?.booleanOrNull ?: d.handoffNotification,
                     tidyDone = (o["tidyDone"] as? JsonPrimitive)?.booleanOrNull ?: d.tidyDone,
                     updateCheck = (o["updateCheck"] as? JsonPrimitive)?.booleanOrNull ?: d.updateCheck,
+                    relayEnabled = (o["relayEnabled"] as? JsonPrimitive)?.booleanOrNull ?: d.relayEnabled,
+                    relayApps = (o["relayApps"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+                        ?: d.relayApps,
                 )
             )
         }
@@ -154,6 +163,8 @@ data class AppSettings(
         put("handoffNotification", handoffNotification)
         put("tidyDone", tidyDone)
         put("updateCheck", updateCheck)
+        put("relayEnabled", relayEnabled)
+        put("relayApps", buildJsonArray { relayApps.forEach { add(JsonPrimitive(it)) } })
     }
 
     /** QUICK_NAMES payload: labels joined by \n (<= 5 labels, each <= 24 bytes). */
