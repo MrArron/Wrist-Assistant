@@ -49,6 +49,10 @@ import java.time.format.TextStyle
 import com.mrarron.wristclaude.phone.CalendarRepo
 import com.mrarron.wristclaude.phone.Speaker
 import java.util.Locale
+import androidx.compose.material3.Checkbox
+import com.mrarron.wristclaude.core.Relay
+import com.mrarron.wristclaude.phone.NotificationBuffer
+import com.mrarron.wristclaude.phone.PhoneTools
 
 @Composable
 fun SettingsScreen(modifier: Modifier = Modifier) {
@@ -161,6 +165,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             TextButton(onClick = { UsageStore.reset() }) { Text("Reset counts") }
         }
 
+        Section("Relay to watch") { RelaySettings() }
+
         Section("App updates") {
             SwitchRow("Check for a new phone app once a day", updateCheck) { updateCheck = it }
             Text(
@@ -228,4 +234,65 @@ private fun <T> Choice(label: String, options: List<T>, selected: T, display: (T
             }
         }
     }
+}
+
+/**
+ * "Relay to watch": pick apps (for example Claude Duet) whose notifications are re-posted with Reply and
+ * Save to notes actions for the watch. Saved immediately, like the switches on the Notes tab.
+ */
+@Composable
+private fun RelaySettings() {
+    val ctx = LocalContext.current
+    val settings by SettingsStore.settings.collectAsState()
+    val access = remember { PhoneTools.notificationAccess(ctx) }
+    val seen = remember { NotificationBuffer.recentApps().filter { it.first != ctx.packageName } }
+    var typed by remember { mutableStateOf("") }
+    Text(
+        "Messages from the apps you pick here (for example Claude Duet) come to your watch with Reply and Save to notes. " +
+            "Save to notes adds them to your notes doc as a follow-up. Off unless you turn it on; nothing is stored or sent to Claude.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    SwitchRow("Relay notifications from these apps", settings.relayEnabled) { on ->
+        SettingsStore.update(ctx) { it.copy(relayEnabled = on) }
+    }
+    if (!access) {
+        Text("Needs notification access: turn it on in the Setup tab.", style = MaterialTheme.typography.bodySmall)
+    }
+    val labels = seen.toMap()
+    val rows = (settings.relayApps + seen.map { it.first }).distinct()
+    if (rows.isEmpty()) {
+        Text(
+            "No apps to pick from yet. Apps appear here after they post a notification, or type a package name below.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    rows.forEach { pkg ->
+        val on = pkg in settings.relayApps
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(on, { checked ->
+                SettingsStore.update(ctx) { s -> s.copy(relayApps = if (checked) s.relayApps + pkg else s.relayApps - pkg) }
+            }, enabled = on || settings.relayApps.size < Relay.MAX_APPS)
+            Column(Modifier.weight(1f)) {
+                Text(labels[pkg] ?: pkg)
+                if (labels[pkg] != null) Text(pkg, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            typed, { typed = it.trim().take(120) }, label = { Text("Package name") }, singleLine = true, modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = {
+            val add = Relay.cleanApps(listOf(typed))
+            if (add.isNotEmpty()) {
+                SettingsStore.update(ctx) { it.copy(relayApps = it.relayApps + add) }
+                typed = ""
+            }
+        }, enabled = typed.isNotBlank() && settings.relayApps.size < Relay.MAX_APPS) { Text("Add") }
+    }
+    Text(
+        "To see them on the watch, allow Wrist Assistant in the Pebble app's notification settings. If the Pebble app " +
+            "already shows that app's own notifications, mute that app there so the watch doesn't buzz twice.",
+        style = MaterialTheme.typography.bodySmall,
+    )
 }

@@ -89,6 +89,10 @@
         <receiver
             android:name=".phone.CopyTextReceiver"
             android:exported="false" />
+        <!-- Reply / Save to notes on notifications relayed to the watch (explicit intents only) -->
+        <receiver
+            android:name=".phone.RelayActionReceiver"
+            android:exported="false" />
 
         <!-- DownloadManager's broadcast comes from another app, so this must be exported;
              the receiver ignores ids it didn't start. -->

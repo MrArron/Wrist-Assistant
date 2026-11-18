@@ -30,6 +30,7 @@ Two parts:
 - Draft texts and emails (opened pre-filled in your own apps), set alarms and timers
 - Check and add calendar events
 - Read and reply to recent notifications
+- Optional: relay messages from apps you pick (for example Claude Duet) to the watch with Reply and Save to notes
 - Read an answer aloud on the phone
 - Save notes and hand off a whole conversation to a Google Doc in your own Drive
 - Anything sent to another person is confirmed on the watch first
@@ -73,7 +74,8 @@ Details: [`wrist-claude/README.md`](wrist-claude/README.md).
 - Notes documents live in your own Google Drive. The companion asks only for the `drive.file` scope,
   so it can open only files it created itself.
 - Notification text is read only when you ask, and sending anything to another person needs your
-  approval on the watch.
+  approval on the watch. "Relay to watch" (off by default) re-posts only the apps you pick, keeps the
+  text in memory only and never sends it to Claude.
 
 ## Optional: use with your main Claude
 
@@ -83,6 +85,8 @@ my notes") and keep a short context doc up to date. Setup is in
 
 - a **"catch up on my notes" skill** that works through the notes and handoffs you saved from the watch;
 - a **context refresh scheduled task** that keeps the "Wrist Assistant Context" doc current.
+
+Claude Duet can work through the same notes doc too: see [`for-claude/duet.md`](for-claude/duet.md).
 
 ## Build from source
 

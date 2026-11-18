@@ -56,6 +56,7 @@ object Notifications {
                 },
             )
         )
+        WatchRelay.createChannel(ctx)
     }
 
     /** POST_NOTIFICATIONS is a runtime permission only on Android 13+; before that only the app switch counts. */

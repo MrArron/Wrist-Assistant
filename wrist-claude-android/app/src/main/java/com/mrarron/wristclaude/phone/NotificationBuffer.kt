@@ -19,11 +19,18 @@ class CapturedNotification(
     val text: String,
     val time: Long,
     val replyAction: Notification.Action?,
+    /** From an app the user relays to the watch; kept longer so "what did Duet say?" still finds it. */
+    val relayed: Boolean = false,
+    /** The original tap action, reused by the relayed copy so tapping it on the phone opens the source app. */
+    val contentIntent: PendingIntent? = null,
 ) {
     val canReply get() = replyAction != null
 }
 
-/** In-memory ring buffer of the last 50 notifications. Never written to disk. */
+/**
+ * In-memory ring buffer of the last 50 notifications. Never written to disk. When full, the oldest notification
+ * that isn't from a relayed app goes first, so a busy group chat can't push out the message an assistant sent.
+ */
 object NotificationBuffer {
     const val MAX = 50
     private val items = ArrayDeque<CapturedNotification>()
@@ -33,7 +40,10 @@ object NotificationBuffer {
     fun add(n: CapturedNotification) {
         items.removeAll { it.key == n.key }
         items.addFirst(n)
-        while (items.size > MAX) items.removeLast()
+        while (items.size > MAX) {
+            val i = items.indexOfLast { !it.relayed }
+            if (i >= 0) items.removeAt(i) else items.removeLast()
+        }
     }
 
     @Synchronized
@@ -46,8 +56,16 @@ object NotificationBuffer {
     @Synchronized
     fun find(id: String): CapturedNotification? = items.firstOrNull { it.id == id }
 
+    /** The latest capture of the system notification [key] (an app re-posting it gets a new id). */
+    @Synchronized
+    fun findByKey(key: String): CapturedNotification? = items.firstOrNull { it.key == key }
+
     @Synchronized
     fun clear() = items.clear()
+
+    /** Apps seen since the listener started (package to label), newest first: the picker for "Relay to watch". */
+    @Synchronized
+    fun recentApps(): List<Pair<String, String>> = items.map { it.pkg to it.app }.distinctBy { it.first }
 
     /** Sends [text] through the notification's RemoteInput reply action. */
     fun reply(ctx: Context, n: CapturedNotification, text: String): Boolean {
@@ -72,6 +90,7 @@ object NotificationBuffer {
 class NotificationCaptureService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         NotificationBuffer.clear()
+        WatchRelay.clearSeen()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -93,7 +112,8 @@ class NotificationCaptureService : NotificationListenerService() {
             sbn.packageName
         }
         val reply = n.actions?.firstOrNull { a -> a.remoteInputs?.any { it.allowFreeFormInput } == true }
-        NotificationBuffer.add(
+        val relay = WatchRelay.wants(sbn.packageName, packageName)
+        val captured =
             CapturedNotification(
                 id = NotificationBuffer.nextId(),
                 key = sbn.key,
@@ -103,7 +123,10 @@ class NotificationCaptureService : NotificationListenerService() {
                 text = body.take(600),
                 time = sbn.postTime,
                 replyAction = reply,
+                relayed = relay,
+                contentIntent = n.contentIntent,
             )
-        )
+        NotificationBuffer.add(captured)
+        if (relay) WatchRelay.post(this, captured)
     }
 }
