@@ -8,6 +8,11 @@ or phone apps, and Wrist Assistant works fine without them. They add two things:
 2. **A context refresh scheduled task.** Twice a day Claude rewrites a short "Wrist Assistant Context"
    doc about what you're working on. The companion reads it and gives it to the watch as background.
 
+## Using Claude Duet instead
+
+See [`duet-setup.md`](duet-setup.md) for letting Claude Duet work your Notes doc and for getting its
+notifications on the watch.
+
 ## What you need
 
 - A Claude plan that can use custom skills: **Pro, Max, Team or Enterprise**, with **code execution**
